@@ -1,6 +1,6 @@
-import { UserSchema } from "@gb-ecomm/shared-types";
+import { UserSchema } from "@geekbase-labs/shared-types";
 
-describe("@gb-ecomm/shared-types smoke test", () => {
+describe("@geekbase-labs/shared-types smoke test", () => {
   it("parses a valid user with the shared UserSchema", () => {
     const result = UserSchema.safeParse({
       id: "11111111-1111-4111-8111-111111111111",
