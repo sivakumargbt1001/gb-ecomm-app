@@ -4,6 +4,7 @@ import {
   loginWithEmail,
   logout,
   requestOtp,
+  resetPassword,
   signupWithEmail,
   verifyOtp,
 } from "../auth-api";
@@ -100,6 +101,19 @@ describe("auth-api", () => {
       expect(mockedApiFetch).toHaveBeenCalledWith("/api/auth/forgot-password", {
         method: "POST",
         body: { email: "a@b.com" },
+      });
+    });
+  });
+
+  describe("resetPassword", () => {
+    it("posts to /api/auth/reset-password with the token and new password", async () => {
+      mockedApiFetch.mockResolvedValue(undefined);
+
+      await resetPassword({ token: "reset-token-1", password: "longenough1" });
+
+      expect(mockedApiFetch).toHaveBeenCalledWith("/api/auth/reset-password", {
+        method: "POST",
+        body: { token: "reset-token-1", password: "longenough1" },
       });
     });
   });
