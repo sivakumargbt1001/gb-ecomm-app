@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import {
   RequestOtpSchema,
   SignupEmailSchema,
-  type OtpChannel,
   type RequestOtpInput,
   type SignupEmailInput,
 } from "@geekbase-labs/shared-types";
@@ -20,9 +19,6 @@ export default function SignupScreen() {
   const [method, setMethod] = useState<Method>("email");
   const [emailSignupSuccess, setEmailSignupSuccess] = useState(false);
   const [signedUpEmail, setSignedUpEmail] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneForOtp, setPhoneForOtp] = useState("");
-  const [channelForOtp, setChannelForOtp] = useState<OtpChannel>("sms");
 
   const emailForm = useForm<SignupEmailInput>({
     resolver: zodResolver(SignupEmailSchema),
@@ -45,9 +41,10 @@ export default function SignupScreen() {
   const requestOtpMutation = useMutation({
     mutationFn: requestOtp,
     onSuccess: (_, variables) => {
-      setPhoneForOtp(variables.phone);
-      setChannelForOtp(variables.channel);
-      setOtpSent(true);
+      router.push({
+        pathname: "/(auth)/otp-verify",
+        params: { phone: variables.phone, channel: variables.channel },
+      });
     },
   });
 
@@ -68,21 +65,6 @@ export default function SignupScreen() {
               <Text className="font-semibold text-white">Go to Login</Text>
             </Pressable>
           </Link>
-        </View>
-      </View>
-    );
-  }
-
-  if (otpSent) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white p-6">
-        <View className="w-full max-w-md space-y-2 rounded-2xl border border-gray-200 bg-white p-8">
-          <Text className="text-center text-lg font-semibold text-gray-900">
-            Verification code sent
-          </Text>
-          <Text className="text-center text-sm text-gray-500">
-            We sent a code to {phoneForOtp} via {channelForOtp === "sms" ? "SMS" : "WhatsApp"}.
-          </Text>
         </View>
       </View>
     );

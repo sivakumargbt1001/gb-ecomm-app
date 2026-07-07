@@ -1,5 +1,5 @@
 import { apiFetch } from "../api-client";
-import { loginWithEmail, requestOtp, signupWithEmail, verifyOtp } from "../auth-api";
+import { forgotPassword, loginWithEmail, requestOtp, signupWithEmail, verifyOtp } from "../auth-api";
 
 jest.mock("../api-client", () => ({
   apiFetch: jest.fn(),
@@ -80,6 +80,19 @@ describe("auth-api", () => {
       expect(result).toEqual({
         user,
         tokens: { accessToken: "access-2", refreshToken: "refresh-2" },
+      });
+    });
+  });
+
+  describe("forgotPassword", () => {
+    it("posts to /api/auth/forgot-password", async () => {
+      mockedApiFetch.mockResolvedValue(undefined);
+
+      await forgotPassword({ email: "a@b.com" });
+
+      expect(mockedApiFetch).toHaveBeenCalledWith("/api/auth/forgot-password", {
+        method: "POST",
+        body: { email: "a@b.com" },
       });
     });
   });

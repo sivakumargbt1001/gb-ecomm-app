@@ -8,7 +8,6 @@ import {
   LoginEmailSchema,
   RequestOtpSchema,
   type LoginEmailInput,
-  type OtpChannel,
   type RequestOtpInput,
 } from "@geekbase-labs/shared-types";
 
@@ -22,9 +21,6 @@ type Method = "email" | "phone";
 export default function LoginScreen() {
   const setUser = useAuthStore((state) => state.setUser);
   const [method, setMethod] = useState<Method>("email");
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneForOtp, setPhoneForOtp] = useState("");
-  const [channelForOtp, setChannelForOtp] = useState<OtpChannel>("sms");
 
   const emailForm = useForm<LoginEmailInput>({
     resolver: zodResolver(LoginEmailSchema),
@@ -49,26 +45,12 @@ export default function LoginScreen() {
   const requestOtpMutation = useMutation({
     mutationFn: requestOtp,
     onSuccess: (_, variables) => {
-      setPhoneForOtp(variables.phone);
-      setChannelForOtp(variables.channel);
-      setOtpSent(true);
+      router.push({
+        pathname: "/(auth)/otp-verify",
+        params: { phone: variables.phone, channel: variables.channel },
+      });
     },
   });
-
-  if (otpSent) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white p-6">
-        <View className="w-full max-w-md space-y-2 rounded-2xl border border-gray-200 bg-white p-8">
-          <Text className="text-center text-lg font-semibold text-gray-900">
-            Verification code sent
-          </Text>
-          <Text className="text-center text-sm text-gray-500">
-            We sent a code to {phoneForOtp} via {channelForOtp === "sms" ? "SMS" : "WhatsApp"}.
-          </Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <ScrollView
