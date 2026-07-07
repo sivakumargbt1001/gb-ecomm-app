@@ -2,6 +2,7 @@ import type {
   AuthTokens,
   ForgotPasswordInput,
   LoginEmailInput,
+  RefreshTokenInput,
   RequestOtpInput,
   SignupEmailInput,
   User,
@@ -48,4 +49,8 @@ export async function verifyOtp(data: VerifyOtpInput): Promise<AuthResult> {
 
 export function forgotPassword(data: ForgotPasswordInput): Promise<void> {
   return apiFetch<void>("/api/auth/forgot-password", { method: "POST", body: data });
+}
+
+export function logout(data: RefreshTokenInput): Promise<void> {
+  return apiFetch<void>("/api/auth/logout", { method: "POST", body: data });
 }
