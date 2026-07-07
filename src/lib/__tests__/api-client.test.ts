@@ -33,6 +33,19 @@ describe("apiFetch", () => {
     expect((requestInit.headers as Record<string, string>).Authorization).toBeUndefined();
   });
 
+  it("resolves without parsing a body for a 204 No Content response", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      json: async () => {
+        throw new Error("json() should not be called for a 204 response");
+      },
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(apiFetch("/api/auth/logout")).resolves.toBeUndefined();
+  });
+
   it("throws when the response is not ok", async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: false,
