@@ -1,0 +1,27 @@
+# Phase 2.6 — Product detail with custom option fields (Maestro)
+#
+# Assumes the seeded catalog contains at least one product that has custom
+# option fields defined (see the backend catalog seed / admin). Requires a
+# running backend and the app installed on a simulator/emulator.
+#
+# Run:  maestro test .maestro/product-custom-fields.yaml
+appId: host.exp.Exponent
+---
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "product-list"
+
+# Open a product detail screen.
+- tapOn:
+    id: "product-card"
+    index: 0
+- assertVisible:
+    id: "product-detail"
+
+# The "Customize your order" section renders its option field(s) when present.
+- assertVisible:
+    text: "Customize your order"
+- assertVisible:
+    id: "option-field"

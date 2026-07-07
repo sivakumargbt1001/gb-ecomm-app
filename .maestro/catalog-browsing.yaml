@@ -1,0 +1,44 @@
+# Phase 2.6 — Mobile catalog browsing E2E (Maestro)
+#
+# Requires a running backend (127.0.0.1:8787 with seeded catalog data reachable
+# from the device/emulator) and the app installed on a simulator/emulator.
+# The appId below is the Expo Go container; for a standalone/dev build, replace
+# it with this app's real bundle id (derived from app.json `slug`/`ios`).
+#
+# Run:  maestro test .maestro/catalog-browsing.yaml
+appId: host.exp.Exponent
+---
+- launchApp:
+    clearState: true
+
+# The catalog list renders on the home tab.
+- assertVisible:
+    id: "product-list"
+
+# At least one product card is present.
+- assertVisible:
+    id: "product-card"
+
+# Filtering by a category chip keeps the list visible.
+- tapOn:
+    text: "Newest"
+- assertVisible:
+    id: "product-list"
+
+# Switch sort to price ascending — list still renders.
+- tapOn:
+    text: "Price ↑"
+- assertVisible:
+    id: "product-list"
+
+# Open the first product's detail screen.
+- tapOn:
+    id: "product-card"
+    index: 0
+- assertVisible:
+    id: "product-detail"
+
+# Navigate back to the catalog list.
+- back
+- assertVisible:
+    id: "product-list"
