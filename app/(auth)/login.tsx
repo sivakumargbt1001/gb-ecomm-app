@@ -15,6 +15,7 @@ import { loginWithEmail, requestOtp } from "../../src/lib/auth-api";
 import { setAuthToken } from "../../src/lib/api-client";
 import { useAuthStore } from "../../src/lib/auth-store";
 import { saveTokens } from "../../src/lib/token-storage";
+import { mergeGuestCart } from "../../src/lib/cart-api";
 
 type Method = "email" | "phone";
 
@@ -38,6 +39,7 @@ export default function LoginScreen() {
       await saveTokens(tokens);
       setAuthToken(tokens.accessToken);
       setUser(user);
+      mergeGuestCart().catch(() => {});
       router.replace("/(tabs)");
     },
   });

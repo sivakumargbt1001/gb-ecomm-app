@@ -1,12 +1,17 @@
+import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
+  Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import type { ProductOptionField } from "@geekbase-labs/shared-types";
+import * as DocumentPicker from "expo-document-picker";
 
 import { OptionField } from "../../src/components/catalog/option-field";
 import {
@@ -14,6 +19,8 @@ import {
   fetchProductOptionFields,
   formatPaise,
 } from "../../src/lib/catalog-api";
+import { useCart } from "../../src/lib/use-cart";
+import { uploadOptionFile } from "../../src/lib/cart-api";
 
 export default function ProductDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -29,6 +36,18 @@ export default function ProductDetailScreen() {
     queryFn: () => fetchProductOptionFields(slug),
     enabled: Boolean(slug),
   });
+
+  const { add } = useCart();
+
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
+  const [quantity, setQuantity] = useState(1);
+  const [optionValues, setOptionValues] = useState<
+    Record<string, string | number>
+  >({});
+  const [fileNames, setFileNames] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
 
   if (productQuery.isLoading) {
     return (
@@ -49,6 +68,77 @@ export default function ProductDetailScreen() {
   const product = productQuery.data;
   const cover = product.images[0];
   const optionFields = optionFieldsQuery.data ?? [];
+  const variants = product.variants;
+
+  const effectiveVariantId =
+    selectedVariantId ??
+    (variants.length > 0
+      ? (variants.find((v) => v.stock > 0)?.id ?? variants[0].id)
+      : null);
+
+  const selectedVariant = variants.find((v) => v.id === effectiveVariantId);
+  const isSoldOut =
+    variants.length > 0 && variants.every((v) => v.stock <= 0);
+  const variantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
+
+  function setOptionValue(fieldId: string, value: string | number) {
+    setOptionValues((prev) => ({ ...prev, [fieldId]: value }));
+  }
+
+  async function handlePickFile(field: ProductOptionField) {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/*", "application/pdf"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
+      setUploading(true);
+      try {
+        const uploaded = await uploadOptionFile({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType ?? "application/octet-stream",
+        });
+        setOptionValues((prev) => ({ ...prev, [field.id]: uploaded.url }));
+        setFileNames((prev) => ({ ...prev, [field.id]: asset.name }));
+      } finally {
+        setUploading(false);
+      }
+    } catch {
+      Alert.alert("Upload failed", "Could not upload the file. Please try again.");
+    }
+  }
+
+  function validateRequiredFields(): boolean {
+    for (const field of optionFields) {
+      if (field.required && !optionValues[field.id]) {
+        Alert.alert("Required field", `Please fill in "${field.label}".`);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function handleAddToCart() {
+    if (!validateRequiredFields()) return;
+
+    add.mutate(
+      {
+        productId: product.id,
+        variantId: effectiveVariantId ?? undefined,
+        quantity,
+        customOptionValues: optionValues,
+      },
+      {
+        onSuccess: () => {
+          router.navigate("/(tabs)/cart");
+        },
+      },
+    );
+  }
 
   return (
     <>
@@ -74,7 +164,9 @@ export default function ProductDetailScreen() {
               {product.name}
             </Text>
             <Text className="text-xl font-semibold text-neutral-900">
-              {formatPaise(product.priceInPaise)}
+              {formatPaise(
+                selectedVariant?.priceInPaise ?? product.priceInPaise,
+              )}
             </Text>
           </View>
 
@@ -82,29 +174,44 @@ export default function ProductDetailScreen() {
             <Text className="text-neutral-600">{product.description}</Text>
           ) : null}
 
-          {product.variants.length > 0 ? (
+          {variants.length > 0 ? (
             <View className="gap-2">
-              <Text className="text-sm font-medium text-neutral-800">Options</Text>
+              <Text className="text-sm font-medium text-neutral-800">
+                Options
+              </Text>
               <View className="flex-row flex-wrap gap-2">
-                {product.variants.map((variant) => (
-                  <View
-                    key={variant.id}
-                    testID="variant"
-                    className={`rounded-lg border px-3 py-1.5 ${
-                      variant.stock > 0 ? "border-neutral-300" : "border-neutral-200"
-                    }`}
-                  >
-                    <Text
-                      className={
-                        variant.stock > 0
-                          ? "text-sm text-neutral-800"
-                          : "text-sm text-neutral-400 line-through"
-                      }
+                {variants.map((variant) => {
+                  const isSelected = variant.id === effectiveVariantId;
+                  const outOfStock = variant.stock <= 0;
+                  return (
+                    <Pressable
+                      key={variant.id}
+                      testID="variant"
+                      onPress={() => {
+                        if (!outOfStock) setSelectedVariantId(variant.id);
+                      }}
+                      className={`rounded-lg border px-3 py-1.5 ${
+                        isSelected
+                          ? "border-black bg-black"
+                          : outOfStock
+                            ? "border-neutral-200"
+                            : "border-neutral-300"
+                      }`}
                     >
-                      {variant.name}
-                    </Text>
-                  </View>
-                ))}
+                      <Text
+                        className={
+                          isSelected
+                            ? "text-sm text-white"
+                            : outOfStock
+                              ? "text-sm text-neutral-400 line-through"
+                              : "text-sm text-neutral-800"
+                        }
+                      >
+                        {variant.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             </View>
           ) : null}
@@ -115,9 +222,73 @@ export default function ProductDetailScreen() {
                 Customize your order
               </Text>
               {optionFields.map((field) => (
-                <OptionField key={field.id} field={field} />
+                <OptionField
+                  key={field.id}
+                  field={field}
+                  value={optionValues[field.id]}
+                  onChangeValue={(val) => setOptionValue(field.id, val)}
+                  onPickFile={() => handlePickFile(field)}
+                  fileName={fileNames[field.id]}
+                />
               ))}
             </View>
+          ) : null}
+
+          {/* Quantity */}
+          <View className="flex-row items-center gap-4">
+            <Text className="text-sm font-medium text-neutral-800">Qty</Text>
+            <View className="flex-row items-center rounded-lg border border-neutral-300">
+              <Pressable
+                onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+                className="px-4 py-2"
+                testID="qty-minus"
+              >
+                <Text className="text-lg font-semibold text-neutral-700">
+                  -
+                </Text>
+              </Pressable>
+              <Text
+                className="min-w-[32px] text-center text-base font-medium"
+                testID="qty-value"
+              >
+                {quantity}
+              </Text>
+              <Pressable
+                onPress={() => setQuantity((q) => Math.min(99, q + 1))}
+                className="px-4 py-2"
+                testID="qty-plus"
+              >
+                <Text className="text-lg font-semibold text-neutral-700">
+                  +
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Add to Cart */}
+          <Pressable
+            onPress={handleAddToCart}
+            disabled={
+              add.isPending || isSoldOut || variantSoldOut || uploading
+            }
+            className="items-center rounded-lg bg-black py-4 disabled:opacity-50"
+            testID="add-to-cart-button"
+          >
+            <Text className="text-base font-semibold text-white">
+              {isSoldOut || variantSoldOut
+                ? "Sold Out"
+                : add.isPending
+                  ? "Adding..."
+                  : uploading
+                    ? "Uploading..."
+                    : "Add to Cart"}
+            </Text>
+          </Pressable>
+
+          {add.isError ? (
+            <Text className="text-center text-sm text-red-600">
+              {add.error.message}
+            </Text>
           ) : null}
         </View>
       </ScrollView>

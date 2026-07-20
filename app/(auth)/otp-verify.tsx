@@ -16,6 +16,7 @@ import {
   tickOtpTimerState,
   type OtpTimerState,
 } from "../../src/lib/otp-timer";
+import { mergeGuestCart } from "../../src/lib/cart-api";
 
 export default function OtpVerifyScreen() {
   const { phone, channel } = useLocalSearchParams<{ phone: string; channel: OtpChannel }>();
@@ -36,6 +37,7 @@ export default function OtpVerifyScreen() {
       await saveTokens(tokens);
       setAuthToken(tokens.accessToken);
       setUser(user);
+      mergeGuestCart().catch(() => {});
       router.replace("/(tabs)");
     },
   });
