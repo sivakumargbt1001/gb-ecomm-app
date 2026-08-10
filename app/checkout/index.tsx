@@ -21,6 +21,7 @@ import {
   type CheckoutResult,
 } from "@geekbase-labs/shared-types";
 import type { z } from "zod";
+import { useTrackEvent } from "../../src/lib/use-track-event";
 import { useCart } from "../../src/lib/use-cart";
 import { checkout, setCartContact } from "../../src/lib/cart-api";
 import { formatPaise } from "../../src/lib/catalog-api";
@@ -41,6 +42,8 @@ export default function CheckoutScreen() {
   );
   const setCheckoutLoading = useCartUiStore((s) => s.setCheckoutLoading);
   const isCheckoutLoading = useCartUiStore((s) => s.isCheckoutLoading);
+
+  useTrackEvent("checkout_started");
 
   if (isLoading) {
     return (

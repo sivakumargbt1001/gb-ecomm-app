@@ -11,10 +11,24 @@ import type {
 } from "@geekbase-labs/shared-types";
 
 import { apiFetch } from "./api-client";
+import { getAnalyticsSessionId } from "./analytics-session";
 
 export interface AuthResult {
   user: User;
   tokens: AuthTokens;
+}
+
+// Sent only on the two routes that actually authenticate someone, which is where
+// the backend links this shopper's guest analytics session to their user id.
+// Attached per-call like cart-api's guestHeaders rather than inside apiFetch, so
+// no other request pays for a SecureStore read.
+async function analyticsHeaders(): Promise<Record<string, string>> {
+  try {
+    return { "X-Analytics-Session": await getAnalyticsSessionId() };
+  } catch {
+    // Losing attribution is acceptable; being unable to log in is not.
+    return {};
+  }
 }
 
 type AuthApiResponse = { user: User } & AuthTokens;
@@ -32,6 +46,7 @@ export async function loginWithEmail(data: LoginEmailInput): Promise<AuthResult>
   const response = await apiFetch<AuthApiResponse>("/api/auth/login", {
     method: "POST",
     body: data,
+    headers: await analyticsHeaders(),
   });
   return splitAuthResponse(response);
 }
@@ -44,6 +59,7 @@ export async function verifyOtp(data: VerifyOtpInput): Promise<AuthResult> {
   const response = await apiFetch<AuthApiResponse>("/api/auth/otp/verify", {
     method: "POST",
     body: data,
+    headers: await analyticsHeaders(),
   });
   return splitAuthResponse(response);
 }

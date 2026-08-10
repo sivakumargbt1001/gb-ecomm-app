@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 
 import { formatPaise } from "../../src/lib/catalog-api";
+import { useTrackEvent } from "../../src/lib/use-track-event";
 
 export default function OrderConfirmationScreen() {
   const { orderId, total, razorpayOrderId } = useLocalSearchParams<{
@@ -9,6 +10,16 @@ export default function OrderConfirmationScreen() {
     total: string;
     razorpayOrderId: string;
   }>();
+
+  const totalInPaise = Number(total);
+  useTrackEvent(
+    "order_placed",
+    {
+      ...(orderId ? { orderId } : {}),
+      ...(Number.isFinite(totalInPaise) ? { valueInPaise: totalInPaise } : {}),
+    },
+    Boolean(orderId),
+  );
 
   return (
     <>

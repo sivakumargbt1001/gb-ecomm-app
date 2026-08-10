@@ -19,6 +19,8 @@ import {
   fetchProductOptionFields,
   formatPaise,
 } from "../../src/lib/catalog-api";
+import { trackEvent } from "../../src/lib/analytics";
+import { useTrackEvent } from "../../src/lib/use-track-event";
 import { useCart } from "../../src/lib/use-cart";
 import { uploadOptionFile } from "../../src/lib/cart-api";
 
@@ -38,6 +40,15 @@ export default function ProductDetailScreen() {
   });
 
   const { add } = useCart();
+
+  // Above the loading and not-found early returns, so the hook order is stable;
+  // `enabled` holds the event back until the product itself has loaded.
+  const viewedProductId = productQuery.data?.id;
+  useTrackEvent(
+    "product_viewed",
+    viewedProductId ? { productId: viewedProductId } : {},
+    Boolean(viewedProductId),
+  );
 
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
@@ -77,6 +88,7 @@ export default function ProductDetailScreen() {
       : null);
 
   const selectedVariant = variants.find((v) => v.id === effectiveVariantId);
+
   const isSoldOut =
     variants.length > 0 && variants.every((v) => v.stock <= 0);
   const variantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
@@ -134,6 +146,13 @@ export default function ProductDetailScreen() {
       },
       {
         onSuccess: () => {
+          // Reported after the server accepted the line, so the funnel counts
+          // real additions rather than taps that failed on stock.
+          void trackEvent("added_to_cart", {
+            productId: product.id,
+            valueInPaise:
+              (selectedVariant?.priceInPaise ?? product.priceInPaise) * quantity,
+          });
           router.navigate("/(tabs)/cart");
         },
       },

@@ -46,10 +46,13 @@ describe("auth-api", () => {
 
       const result = await loginWithEmail({ email: "a@b.com", password: "longenough1" });
 
-      expect(mockedApiFetch).toHaveBeenCalledWith("/api/auth/login", {
-        method: "POST",
-        body: { email: "a@b.com", password: "longenough1" },
-      });
+      expect(mockedApiFetch).toHaveBeenCalledWith(
+        "/api/auth/login",
+        expect.objectContaining({
+          method: "POST",
+          body: { email: "a@b.com", password: "longenough1" },
+        }),
+      );
       expect(result).toEqual({
         user,
         tokens: { accessToken: "access-1", refreshToken: "refresh-1" },
@@ -81,10 +84,13 @@ describe("auth-api", () => {
 
       const result = await verifyOtp({ phone: "+15551234567", code: "123456" });
 
-      expect(mockedApiFetch).toHaveBeenCalledWith("/api/auth/otp/verify", {
-        method: "POST",
-        body: { phone: "+15551234567", code: "123456" },
-      });
+      expect(mockedApiFetch).toHaveBeenCalledWith(
+        "/api/auth/otp/verify",
+        expect.objectContaining({
+          method: "POST",
+          body: { phone: "+15551234567", code: "123456" },
+        }),
+      );
       expect(result).toEqual({
         user,
         tokens: { accessToken: "access-2", refreshToken: "refresh-2" },
