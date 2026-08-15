@@ -168,6 +168,16 @@ export default function OrderDetailScreen() {
         {order.items.map((item) => (
           <LineItem key={item.id} item={item} />
         ))}
+        {order.loyaltyDiscountInPaise > 0 ? (
+          <View className="flex-row items-center justify-between pt-3">
+            <Text className="text-sm text-neutral-600">
+              Points ({order.loyaltyPointsRedeemed})
+            </Text>
+            <Text className="text-sm text-neutral-900" testID="order-points">
+              −{formatPaise(order.loyaltyDiscountInPaise)}
+            </Text>
+          </View>
+        ) : null}
         <View className="flex-row items-center justify-between pt-3">
           <Text className="text-base font-semibold text-neutral-900">Total</Text>
           <Text className="text-base font-semibold text-neutral-900" testID="order-total">

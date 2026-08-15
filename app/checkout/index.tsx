@@ -28,7 +28,10 @@ import { checkout, setCartContact } from "../../src/lib/cart-api";
 import { formatPaise } from "../../src/lib/catalog-api";
 import { useCartUiStore } from "../../src/lib/cart-store";
 import { appliedDiscount, checkoutCouponCode } from "../../src/lib/coupon";
+import { checkoutRedeemPoints, redeemedValueInPaise } from "../../src/lib/loyalty";
+import { useLoyaltyBalance } from "../../src/lib/use-loyalty";
 import { CouponField } from "../../src/components/checkout/coupon-field";
+import { LoyaltyField } from "../../src/components/checkout/loyalty-field";
 
 type CheckoutAddressForm = z.input<typeof CheckoutAddressSchema>;
 
@@ -44,6 +47,8 @@ export default function CheckoutScreen() {
     null,
   );
   const [coupon, setCoupon] = useState<CouponPreview | null>(null);
+  const [points, setPoints] = useState(0);
+  const { balance } = useLoyaltyBalance();
   const setCheckoutLoading = useCartUiStore((s) => s.setCheckoutLoading);
   const isCheckoutLoading = useCartUiStore((s) => s.isCheckoutLoading);
 
@@ -110,6 +115,8 @@ export default function CheckoutScreen() {
             address={savedAddress!}
             coupon={coupon}
             onCouponChange={setCoupon}
+            points={points}
+            onPointsChange={setPoints}
             isLoading={isCheckoutLoading}
             onBack={() => setStep("address")}
             onPay={async () => {
@@ -124,12 +131,25 @@ export default function CheckoutScreen() {
                   coupon,
                   cart.subtotalInPaise,
                 );
+                const applied = appliedDiscount(coupon, cart.subtotalInPaise);
+                // Re-capped server-side against the balance and the merchant's
+                // ceiling; points the order can no longer take are withheld.
+                const redeemPoints = balance
+                  ? checkoutRedeemPoints({
+                      points,
+                      balance: balance.balance,
+                      maxRedemptionPercent: balance.maxRedemptionPercent,
+                      subtotalInPaise: cart.subtotalInPaise,
+                      payableInPaise: applied.totalInPaise,
+                    })
+                  : undefined;
                 const result = await checkout({
                   shippingAddress: { ...addr, country: addr.country ?? "IN" },
                   contactEmail: savedContact!.contactEmail ?? undefined,
                   contactPhone: savedContact!.contactPhone ?? undefined,
                   whatsappOptIn: savedContact!.whatsappOptIn ?? false,
                   ...(couponCode ? { couponCode } : {}),
+                  ...(redeemPoints ? { redeemPoints } : {}),
                 });
 
                 await refetch();
@@ -389,6 +409,8 @@ function ReviewStep({
   address,
   coupon,
   onCouponChange,
+  points,
+  onPointsChange,
   isLoading,
   onBack,
   onPay,
@@ -398,11 +420,19 @@ function ReviewStep({
   address: CheckoutAddressForm;
   coupon: CouponPreview | null;
   onCouponChange: (preview: CouponPreview | null) => void;
+  points: number;
+  onPointsChange: (points: number) => void;
   isLoading: boolean;
   onBack: () => void;
   onPay: () => void;
 }) {
   const applied = appliedDiscount(coupon, cart.subtotalInPaise);
+  // Points come off what the coupon left, the same order the server prices in.
+  const pointsDiscountInPaise = Math.min(
+    redeemedValueInPaise(points),
+    applied.totalInPaise,
+  );
+  const payableInPaise = applied.totalInPaise - pointsDiscountInPaise;
 
   return (
     <ScrollView
@@ -475,6 +505,14 @@ function ReviewStep({
             </Text>
           </View>
         ) : null}
+        {pointsDiscountInPaise > 0 ? (
+          <View className="flex-row justify-between">
+            <Text className="text-sm text-neutral-600">Points ({points})</Text>
+            <Text testID="checkout-points" className="text-sm text-neutral-900">
+              −{formatPaise(pointsDiscountInPaise)}
+            </Text>
+          </View>
+        ) : null}
         <View className="flex-row justify-between">
           <Text className="text-base font-semibold text-neutral-900">
             Total
@@ -483,7 +521,7 @@ function ReviewStep({
             testID="checkout-total"
             className="text-base font-semibold text-neutral-900"
           >
-            {formatPaise(applied.totalInPaise)}
+            {formatPaise(payableInPaise)}
           </Text>
         </View>
       </View>
@@ -492,6 +530,13 @@ function ReviewStep({
         subtotalInPaise={cart.subtotalInPaise}
         preview={coupon}
         onPreviewChange={onCouponChange}
+      />
+
+      <LoyaltyField
+        subtotalInPaise={cart.subtotalInPaise}
+        payableInPaise={applied.totalInPaise}
+        points={points}
+        onPointsChange={onPointsChange}
       />
 
       <View className="flex-row gap-3">
@@ -512,7 +557,7 @@ function ReviewStep({
             <ActivityIndicator color="white" />
           ) : (
             <Text className="text-base font-semibold text-white">
-              Pay {formatPaise(applied.totalInPaise)}
+              Pay {formatPaise(payableInPaise)}
             </Text>
           )}
         </Pressable>

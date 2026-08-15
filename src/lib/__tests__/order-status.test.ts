@@ -39,6 +39,8 @@ function order(overrides: Partial<Order> = {}): Order {
     subtotalInPaise: 90000,
     discountInPaise: 0,
     couponCode: null,
+    loyaltyPointsRedeemed: 0,
+    loyaltyDiscountInPaise: 0,
     totalInPaise: 90000,
     razorpayOrderId: "order_test",
     trackingLink: null,

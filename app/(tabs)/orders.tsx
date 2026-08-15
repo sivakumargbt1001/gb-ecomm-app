@@ -16,6 +16,7 @@ import {
   orderStatusLabel,
 } from "../../src/lib/order-status";
 import { useBuyAgain, useOrders } from "../../src/lib/use-orders";
+import { PointsSummary } from "../../src/components/loyalty/points-summary";
 
 function OrderRow({ order }: { order: Order }) {
   const buyAgain = useBuyAgain();
@@ -150,6 +151,7 @@ export default function OrdersScreen() {
       <FlatList
         data={orders}
         keyExtractor={(order) => order.id}
+        ListHeaderComponent={PointsSummary}
         renderItem={({ item }) => <OrderRow order={item} />}
       />
     </View>
