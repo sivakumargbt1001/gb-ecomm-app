@@ -1,0 +1,113 @@
+# Phase 8.5 — Coupon at mobile checkout (Maestro)
+#
+# Prerequisites (none of which exist on the machine this was written on — see
+# the phase file: this flow has NOT been executed):
+#   - a running backend at 127.0.0.1:8787, reachable from the device/emulator,
+#     with the catalog seeded;
+#   - a live coupon whose code is E2E-SAVE20: 20% off, no usage limit, open
+#     window. Create it at /admin/coupons or:
+#       POST /api/coupons/admin {"code":"E2E-SAVE20","discountType":"percentage","discountValue":20}
+#   - the app installed on a simulator/emulator. The appId below is the Expo Go
+#     container; for a standalone/dev build, replace it with this app's real
+#     bundle id (derived from app.json `slug`/`ios`).
+#
+# Razorpay is deliberately never opened: this flow stops at the pay button and
+# asserts the amount it offers to charge. Paying for real needs test keys and
+# native Razorpay setup, both still deferred (see 3.4).
+#
+# Run:  maestro test .maestro/coupon-checkout.yaml
+appId: host.exp.Exponent
+---
+- launchApp:
+    clearState: true
+
+# 1. Put one product in the cart.
+- assertVisible:
+    id: "product-list"
+- tapOn:
+    id: "product-card"
+    index: 0
+- assertVisible:
+    id: "product-detail"
+- tapOn:
+    id: "add-to-cart-button"
+
+# 2. Cart -> checkout.
+- tapOn:
+    id: "cart-screen"
+- assertVisible:
+    id: "cart-item"
+- tapOn:
+    id: "checkout-button"
+
+# 3. Contact step.
+- tapOn:
+    id: "contact-email"
+- inputText: "coupon-shopper@test-e2e.com"
+- tapOn:
+    id: "contact-next"
+
+# 4. Address step.
+- tapOn:
+    id: "address-fullName"
+- inputText: "Asha Rao"
+- tapOn:
+    id: "address-phone"
+- inputText: "+919876543210"
+- tapOn:
+    id: "address-line1"
+- inputText: "1 MG Road"
+- tapOn:
+    id: "address-city"
+- inputText: "Bengaluru"
+- tapOn:
+    id: "address-state"
+- inputText: "KA"
+- tapOn:
+    id: "address-postalCode"
+- inputText: "560001"
+- tapOn:
+    id: "address-next"
+
+# 5. Review step: no coupon yet, so no discount line.
+- assertVisible:
+    id: "checkout-total"
+- assertNotVisible:
+    id: "checkout-discount"
+
+# 6. An unknown code is refused, and the total is left alone.
+- tapOn:
+    id: "coupon-code"
+- inputText: "E2E-NO-SUCH-CODE"
+- tapOn:
+    id: "coupon-apply"
+- assertVisible:
+    id: "coupon-error"
+- assertNotVisible:
+    id: "checkout-discount"
+
+# 7. The real code applies, and the discount reaches the total and the button.
+- tapOn:
+    id: "coupon-code"
+- eraseText
+- inputText: "e2e-save20"
+- tapOn:
+    id: "coupon-apply"
+- assertVisible:
+    id: "coupon-discount"
+- assertVisible:
+    id: "checkout-discount"
+- assertVisible:
+    text: "E2E-SAVE20"
+
+# The pay button quotes the discounted total, not the subtotal.
+- assertVisible:
+    id: "pay-button"
+
+# 8. Removing it puts the full price back.
+- tapOn:
+    id: "coupon-remove"
+- assertNotVisible:
+    id: "checkout-discount"
+- assertVisible:
+    id: "checkout-total"
