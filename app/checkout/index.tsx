@@ -19,6 +19,7 @@ import {
   CheckoutAddressSchema,
   type CartContactInput,
   type CheckoutResult,
+  type CouponPreview,
 } from "@geekbase-labs/shared-types";
 import type { z } from "zod";
 import { useTrackEvent } from "../../src/lib/use-track-event";
@@ -26,6 +27,8 @@ import { useCart } from "../../src/lib/use-cart";
 import { checkout, setCartContact } from "../../src/lib/cart-api";
 import { formatPaise } from "../../src/lib/catalog-api";
 import { useCartUiStore } from "../../src/lib/cart-store";
+import { appliedDiscount, checkoutCouponCode } from "../../src/lib/coupon";
+import { CouponField } from "../../src/components/checkout/coupon-field";
 
 type CheckoutAddressForm = z.input<typeof CheckoutAddressSchema>;
 
@@ -40,6 +43,7 @@ export default function CheckoutScreen() {
   const [savedAddress, setSavedAddress] = useState<CheckoutAddressForm | null>(
     null,
   );
+  const [coupon, setCoupon] = useState<CouponPreview | null>(null);
   const setCheckoutLoading = useCartUiStore((s) => s.setCheckoutLoading);
   const isCheckoutLoading = useCartUiStore((s) => s.isCheckoutLoading);
 
@@ -104,6 +108,8 @@ export default function CheckoutScreen() {
             cart={cart}
             contact={savedContact!}
             address={savedAddress!}
+            coupon={coupon}
+            onCouponChange={setCoupon}
             isLoading={isCheckoutLoading}
             onBack={() => setStep("address")}
             onPay={async () => {
@@ -112,11 +118,18 @@ export default function CheckoutScreen() {
                 await setCartContact(savedContact!);
 
                 const addr = savedAddress!;
+                // Re-priced server-side regardless; a code that no longer
+                // matches the cart is withheld rather than sent.
+                const couponCode = checkoutCouponCode(
+                  coupon,
+                  cart.subtotalInPaise,
+                );
                 const result = await checkout({
                   shippingAddress: { ...addr, country: addr.country ?? "IN" },
                   contactEmail: savedContact!.contactEmail ?? undefined,
                   contactPhone: savedContact!.contactPhone ?? undefined,
                   whatsappOptIn: savedContact!.whatsappOptIn ?? false,
+                  ...(couponCode ? { couponCode } : {}),
                 });
 
                 await refetch();
@@ -374,6 +387,8 @@ function ReviewStep({
   cart,
   contact,
   address,
+  coupon,
+  onCouponChange,
   isLoading,
   onBack,
   onPay,
@@ -381,10 +396,14 @@ function ReviewStep({
   cart: NonNullable<ReturnType<typeof useCart>["cart"]>;
   contact: CartContactInput;
   address: CheckoutAddressForm;
+  coupon: CouponPreview | null;
+  onCouponChange: (preview: CouponPreview | null) => void;
   isLoading: boolean;
   onBack: () => void;
   onPay: () => void;
 }) {
+  const applied = appliedDiscount(coupon, cart.subtotalInPaise);
+
   return (
     <ScrollView
       className="flex-1 bg-white"
@@ -441,14 +460,39 @@ function ReviewStep({
           </View>
         ))}
         <View className="mt-2 flex-row justify-between border-t border-neutral-100 pt-2">
-          <Text className="text-base font-semibold text-neutral-900">
-            Total
-          </Text>
-          <Text className="text-base font-semibold text-neutral-900">
+          <Text className="text-sm text-neutral-600">Subtotal</Text>
+          <Text testID="checkout-subtotal" className="text-sm text-neutral-900">
             {formatPaise(cart.subtotalInPaise)}
           </Text>
         </View>
+        {applied.discountInPaise > 0 ? (
+          <View className="flex-row justify-between">
+            <Text className="text-sm text-neutral-600">
+              Discount{coupon ? ` (${coupon.code})` : ""}
+            </Text>
+            <Text testID="checkout-discount" className="text-sm text-neutral-900">
+              −{formatPaise(applied.discountInPaise)}
+            </Text>
+          </View>
+        ) : null}
+        <View className="flex-row justify-between">
+          <Text className="text-base font-semibold text-neutral-900">
+            Total
+          </Text>
+          <Text
+            testID="checkout-total"
+            className="text-base font-semibold text-neutral-900"
+          >
+            {formatPaise(applied.totalInPaise)}
+          </Text>
+        </View>
       </View>
+
+      <CouponField
+        subtotalInPaise={cart.subtotalInPaise}
+        preview={coupon}
+        onPreviewChange={onCouponChange}
+      />
 
       <View className="flex-row gap-3">
         <Pressable
@@ -468,7 +512,7 @@ function ReviewStep({
             <ActivityIndicator color="white" />
           ) : (
             <Text className="text-base font-semibold text-white">
-              Pay {formatPaise(cart.subtotalInPaise)}
+              Pay {formatPaise(applied.totalInPaise)}
             </Text>
           )}
         </Pressable>

@@ -37,6 +37,8 @@ function order(overrides: Partial<Order> = {}): Order {
     status: "paid",
     paymentStatus: "paid",
     subtotalInPaise: 90000,
+    discountInPaise: 0,
+    couponCode: null,
     totalInPaise: 90000,
     razorpayOrderId: "order_test",
     trackingLink: null,
