@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { apiFetch, setAuthToken } from "../src/lib/api-client";
 import { useAuthStore } from "../src/lib/auth-store";
+import { SiteThemeProvider } from "../src/lib/site-theme-context";
 import { loadTokens } from "../src/lib/token-storage";
 
 function AuthInitializer() {
@@ -56,9 +57,11 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthInitializer />
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
+      <SiteThemeProvider>
+        <AuthInitializer />
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="auto" />
+      </SiteThemeProvider>
     </QueryClientProvider>
   );
 }

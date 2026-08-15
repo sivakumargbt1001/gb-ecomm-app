@@ -14,6 +14,8 @@ import type { ProductOptionField } from "@geekbase-labs/shared-types";
 import * as DocumentPicker from "expo-document-picker";
 
 import { OptionField } from "../../src/components/catalog/option-field";
+import { ProductReviews } from "../../src/components/reviews/product-reviews";
+import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
 import {
   fetchProduct,
   fetchProductOptionFields,
@@ -22,6 +24,7 @@ import {
 import { trackEvent } from "../../src/lib/analytics";
 import { useTrackEvent } from "../../src/lib/use-track-event";
 import { useCart } from "../../src/lib/use-cart";
+import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { uploadOptionFile } from "../../src/lib/cart-api";
 
 export default function ProductDetailScreen() {
@@ -40,6 +43,7 @@ export default function ProductDetailScreen() {
   });
 
   const { add } = useCart();
+  const theme = useSiteTheme();
 
   // Above the loading and not-found early returns, so the hook order is stable;
   // `enabled` holds the event back until the product itself has loaded.
@@ -179,9 +183,12 @@ export default function ProductDetailScreen() {
 
         <View className="gap-6 p-5">
           <View className="gap-1">
-            <Text className="text-2xl font-semibold text-neutral-900">
-              {product.name}
-            </Text>
+            <View className="flex-row items-start justify-between gap-4">
+              <Text className="flex-1 text-2xl font-semibold text-neutral-900">
+                {product.name}
+              </Text>
+              <WishlistHeart productId={product.id} productName={product.name} />
+            </View>
             <Text className="text-xl font-semibold text-neutral-900">
               {formatPaise(
                 selectedVariant?.priceInPaise ?? product.priceInPaise,
@@ -290,7 +297,8 @@ export default function ProductDetailScreen() {
             disabled={
               add.isPending || isSoldOut || variantSoldOut || uploading
             }
-            className="items-center rounded-lg bg-black py-4 disabled:opacity-50"
+            className="items-center rounded-lg py-4 disabled:opacity-50"
+            style={{ backgroundColor: theme.colors.primary }}
             testID="add-to-cart-button"
           >
             <Text className="text-base font-semibold text-white">
@@ -309,6 +317,8 @@ export default function ProductDetailScreen() {
               {add.error.message}
             </Text>
           ) : null}
+
+          <ProductReviews productId={product.id} />
         </View>
       </ScrollView>
     </>
