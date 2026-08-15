@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Maestro seeding output (credentials + ids for the current local run)
+.maestro/.loyalty-seed.env

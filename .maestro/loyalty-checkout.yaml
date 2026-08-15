@@ -1,0 +1,173 @@
+# Phase 9.5 — Loyalty points at mobile checkout (Maestro)
+#
+# The earning half of the story is not reachable from the app: points are
+# credited when an order is *delivered*, which needs an admin, and the order
+# before it needs a real payment. So `scripts/seed-loyalty.mjs` builds the
+# shopper this flow signs in as — 10% earn / 5% cap, one delivered ₹1,000
+# order, 100 points — and this flow covers what the app itself owns: showing
+# the balance, offering only what the merchant's cap allows, refusing more, and
+# taking the redeemed points off the amount it offers to charge.
+#
+# Prerequisites:
+#   - backend up at 127.0.0.1:8787 (ENVIRONMENT=development), reachable from
+#     the emulator — the app reads EXPO_PUBLIC_API_BASE_URL, which on an Android
+#     emulator must be http://10.0.2.2:8787, not localhost;
+#   - the app installed on a simulator/emulator. The appId below is the Expo Go
+#     container; for a standalone/dev build, replace it with this app's real
+#     bundle id.
+#
+# Run:
+#   node .maestro/scripts/seed-loyalty.mjs        # prints the command below
+#   maestro test -e LOYALTY_EMAIL=... -e LOYALTY_PASSWORD=... \
+#     -e LOYALTY_PRODUCT="Loyalty Test Item" .maestro/loyalty-checkout.yaml
+#   node .maestro/scripts/seed-loyalty.mjs --reset
+#
+# Razorpay is deliberately never opened: the flow stops at the pay button and
+# asserts the amount it offers to charge. Paying for real needs test keys and
+# native Razorpay setup, both still deferred (see 3.4).
+appId: host.exp.Exponent
+---
+- launchApp:
+    clearState: true
+
+# 1. Sign in. A balance belongs to a shopper — everything below is invisible to
+#    a guest.
+- tapOn: "Account"
+- tapOn: "Log In"
+- tapOn:
+    id: "login-email"
+- inputText: ${LOYALTY_EMAIL}
+- tapOn:
+    id: "login-password"
+- inputText: ${LOYALTY_PASSWORD}
+- tapOn:
+    id: "login-submit"
+- assertVisible:
+    id: "product-list"
+
+# 2. The Orders tab carries the balance (this app has no account screen — 9.4).
+- tapOn: "Orders"
+- assertVisible:
+    id: "points-summary"
+- assertVisible:
+    id: "points-balance"
+    text: "100"
+# What the points are worth, not just how many there are.
+- assertVisible:
+    id: "points-value"
+    text: ".*₹100.00.*"
+
+# 3. Put the ₹1,000 seeded product in the cart.
+- tapOn: "Home"
+- assertVisible:
+    id: "product-list"
+- scrollUntilVisible:
+    element:
+      text: ${LOYALTY_PRODUCT}
+    direction: DOWN
+- tapOn: ${LOYALTY_PRODUCT}
+- assertVisible:
+    id: "product-detail"
+- tapOn:
+    id: "add-to-cart-button"
+
+# 4. Cart -> checkout.
+- tapOn: "Cart"
+- assertVisible:
+    id: "cart-item"
+- tapOn:
+    id: "checkout-button"
+
+# 5. Contact step.
+- tapOn:
+    id: "contact-email"
+- inputText: ${LOYALTY_EMAIL}
+- tapOn:
+    id: "contact-next"
+
+# 6. Address step.
+- tapOn:
+    id: "address-fullName"
+- inputText: "Asha Rao"
+- tapOn:
+    id: "address-phone"
+- inputText: "+919876543210"
+- tapOn:
+    id: "address-line1"
+- inputText: "1 MG Road"
+- tapOn:
+    id: "address-city"
+- inputText: "Bengaluru"
+- tapOn:
+    id: "address-state"
+- inputText: "KA"
+- tapOn:
+    id: "address-postalCode"
+- inputText: "560001"
+- tapOn:
+    id: "address-next"
+
+# 7. Review step: the field offers the balance, but only the cap is spendable.
+- assertVisible:
+    id: "checkout-total"
+    text: "₹1,000.00"
+- assertVisible:
+    id: "loyalty-field"
+- assertVisible:
+    id: "loyalty-balance"
+    text: "100 available"
+# 5% of ₹1,000 — 50 points, not the 100 they hold.
+- assertVisible:
+    id: "loyalty-usable"
+    text: "Up to 50 points \\(₹50.00\\) on this order"
+- assertNotVisible:
+    id: "checkout-points"
+
+# 8. Asking for more than the cap is refused before the server sees it. (That
+#    the server refuses it too is asserted by the seed script, past the UI.)
+- tapOn:
+    id: "loyalty-points"
+- inputText: "51"
+- tapOn:
+    id: "loyalty-apply"
+- assertVisible:
+    id: "loyalty-error"
+    text: "You can use at most 50 points on this order"
+- assertNotVisible:
+    id: "checkout-points"
+- assertVisible:
+    id: "checkout-total"
+    text: "₹1,000.00"
+
+# 9. 50 points take ₹50 off — the summary, the total and the pay button all
+#    agree.
+- tapOn:
+    id: "loyalty-points"
+- eraseText
+- inputText: "50"
+- tapOn:
+    id: "loyalty-apply"
+- assertVisible:
+    id: "loyalty-discount"
+    text: "−₹50.00"
+- assertVisible:
+    id: "checkout-points"
+    text: "−₹50.00"
+- assertVisible:
+    id: "checkout-total"
+    text: "₹950.00"
+# The button's label is a child of the pressable that carries the id, so the
+# amount it offers to charge is asserted as its own text.
+- assertVisible:
+    id: "pay-button"
+- assertVisible: "Pay ₹950.00"
+
+# 10. Taking them back off restores the full price.
+- tapOn:
+    id: "loyalty-remove"
+- assertNotVisible:
+    id: "checkout-points"
+- assertVisible:
+    id: "checkout-total"
+    text: "₹1,000.00"
+- assertVisible: "Pay ₹1,000.00"

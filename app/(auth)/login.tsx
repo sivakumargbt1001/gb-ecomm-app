@@ -122,6 +122,7 @@ export default function LoginScreen() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     className="rounded-lg border border-gray-300 px-4 py-3"
+                    testID="login-email"
                   />
                 )}
               />
@@ -153,6 +154,7 @@ export default function LoginScreen() {
                     secureTextEntry
                     autoCapitalize="none"
                     className="rounded-lg border border-gray-300 px-4 py-3"
+                    testID="login-password"
                   />
                 )}
               />
@@ -167,6 +169,7 @@ export default function LoginScreen() {
               onPress={emailForm.handleSubmit((data) => loginEmailMutation.mutate(data))}
               disabled={loginEmailMutation.isPending}
               className="items-center rounded-lg bg-black py-3 disabled:opacity-50"
+              testID="login-submit"
             >
               <Text className="font-semibold text-white">
                 {loginEmailMutation.isPending ? "Logging in..." : "Log In with Email"}
