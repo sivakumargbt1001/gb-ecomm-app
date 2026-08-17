@@ -14,6 +14,7 @@ import type { ProductOptionField } from "@geekbase-labs/shared-types";
 import * as DocumentPicker from "expo-document-picker";
 
 import { OptionField } from "../../src/components/catalog/option-field";
+import { ProductRecommendations } from "../../src/components/catalog/product-recommendations";
 import { ProductReviews } from "../../src/components/reviews/product-reviews";
 import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
 import {
@@ -317,6 +318,8 @@ export default function ProductDetailScreen() {
               {add.error.message}
             </Text>
           ) : null}
+
+          <ProductRecommendations productId={product.id} />
 
           <ProductReviews productId={product.id} />
         </View>

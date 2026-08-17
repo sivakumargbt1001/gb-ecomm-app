@@ -2,23 +2,16 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
-import { Link } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import type { ProductSort } from "@geekbase-labs/shared-types";
 
-import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
-import {
-  fetchCategories,
-  fetchProducts,
-  formatPaise,
-  totalStock,
-} from "../../src/lib/catalog-api";
+import { ProductCard } from "../../src/components/catalog/product-card";
+import { fetchCategories, fetchProducts } from "../../src/lib/catalog-api";
 
 const SORTS: { value: ProductSort; label: string }[] = [
   { value: "newest", label: "Newest" },
@@ -103,53 +96,9 @@ export default function CatalogScreen() {
               No products found.
             </Text>
           }
-          renderItem={({ item }) => {
-            const stock = totalStock(item);
-            const cover = item.images[0];
-            return (
-              <View
-                testID="product-card"
-                className="flex-1 overflow-hidden rounded-xl border border-neutral-200"
-              >
-                <View className="absolute right-2 top-2 z-10">
-                  <WishlistHeart productId={item.id} productName={item.name} />
-                </View>
-                <Link href={`/product/${item.slug}`} asChild>
-                  <Pressable>
-                    <View className="aspect-square bg-neutral-100">
-                      {cover ? (
-                        <Image
-                          source={{ uri: cover.url }}
-                          className="h-full w-full"
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View className="h-full w-full items-center justify-center">
-                          <Text className="text-xs text-neutral-400">
-                            No image
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <View className="gap-1 p-3">
-                      <Text
-                        numberOfLines={2}
-                        className="font-medium text-neutral-900"
-                      >
-                        {item.name}
-                      </Text>
-                      <Text className="font-semibold text-neutral-900">
-                        {formatPaise(item.priceInPaise)}
-                      </Text>
-                      {stock !== null && stock <= 0 ? (
-                        <Text className="text-xs text-red-500">Sold out</Text>
-                      ) : null}
-                    </View>
-                  </Pressable>
-                </Link>
-              </View>
-            );
-          }}
+          renderItem={({ item }) => (
+            <ProductCard product={item} className="flex-1" />
+          )}
         />
       )}
     </View>
