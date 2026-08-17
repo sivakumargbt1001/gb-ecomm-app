@@ -43,3 +43,4 @@ yarn-error.*
 # Maestro seeding output (credentials + ids for the current local run)
 .maestro/.loyalty-seed.env
 .maestro/.referral-seed.env
+.maestro/.recommendations-seed.env

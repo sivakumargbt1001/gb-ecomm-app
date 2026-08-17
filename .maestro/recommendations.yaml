@@ -1,0 +1,103 @@
+# Phase 11.5 — "Customers also bought" on the mobile product screen (Maestro)
+#
+# The row is built from other shoppers' paid orders, which the app cannot create:
+# `scripts/seed-recommendations.mjs` places those orders over the API, asserts the
+# ranking the server returns, and leaves the products behind for this flow. So the
+# split is: the seed script owns *what* should be recommended, this flow owns that
+# the screen shows it, hides what it should, and gets a shopper from one product
+# to another.
+#
+# Ordering is deliberately not asserted here. Maestro can say an element is
+# visible, not that it sits left of another inside a horizontal row — the ranking
+# is asserted by the seed script and, in a browser, by the website's
+# e2e/recommendations.spec.ts.
+#
+# Prerequisites:
+#   - backend up at 127.0.0.1:8787 (ENVIRONMENT=development), reachable from the
+#     emulator — the app reads EXPO_PUBLIC_API_BASE_URL, which on an Android
+#     emulator must be http://10.0.2.2:8787, not localhost;
+#   - the app installed on a simulator/emulator. The appId below is the Expo Go
+#     container; for a standalone/dev build, replace it with this app's real
+#     bundle id.
+#
+# Run:
+#   node .maestro/scripts/seed-recommendations.mjs   # prints the command below
+#   maestro test -e REC_SEED_PRODUCT="Rec Reading Lamp" -e REC_FIRST="Rec LED Bulbs" \
+#     -e REC_SECOND="Rec Lamp Shade" -e REC_THIRD="Rec Rotary Dimmer" \
+#     -e REC_HIDDEN="Rec Discontinued" -e REC_LONELY_PRODUCT="Rec Lonely Vase" \
+#     .maestro/recommendations.yaml
+#   node .maestro/scripts/seed-recommendations.mjs --reset
+appId: host.exp.Exponent
+---
+# ---- 1. The seeded product's screen carries the row. ----
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "product-list"
+- scrollUntilVisible:
+    element:
+      text: ${REC_SEED_PRODUCT}
+    direction: DOWN
+- tapOn: ${REC_SEED_PRODUCT}
+- assertVisible:
+    id: "product-detail"
+
+# The row sits below the product and above the reviews section, so it needs a
+# scroll to reach.
+- scrollUntilVisible:
+    element:
+      id: "product-recommendations"
+    direction: DOWN
+- assertVisible: "Customers also bought"
+
+# All three partners from the paid orders are offered.
+- assertVisible: ${REC_FIRST}
+- assertVisible: ${REC_SECOND}
+- assertVisible: ${REC_THIRD}
+
+# The product being viewed is never recommended back to the shopper. Its name is
+# on this screen twice over (header and title bar), so the check is scoped to the
+# row itself rather than the screen. NOTE: `containsDescendants` is the one
+# selector in this flow no other flow in this repo uses — with no Maestro CLI here
+# it is unverified, so it is the first thing to check if this step misbehaves.
+- assertNotVisible:
+    id: "product-recommendations"
+    containsDescendants:
+      - text: ${REC_SEED_PRODUCT}
+
+# An inactive product rode all three of those orders and must never be shown.
+- assertNotVisible: ${REC_HIDDEN}
+
+# ---- 2. A card is a way into that product. ----
+- tapOn: ${REC_FIRST}
+- assertVisible:
+    id: "product-detail"
+- assertVisible: ${REC_FIRST}
+# ...and the shopper can come back to where they were.
+- back
+- assertVisible:
+    id: "product-detail"
+- assertVisible: ${REC_SEED_PRODUCT}
+
+# ---- 3. A product nobody co-bought shows no section at all. ----
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "product-list"
+- scrollUntilVisible:
+    element:
+      text: ${REC_LONELY_PRODUCT}
+    direction: DOWN
+- tapOn: ${REC_LONELY_PRODUCT}
+- assertVisible:
+    id: "product-detail"
+# Scrolled to the bottom of the screen, where the row would have been: only the
+# reviews section is there.
+- scrollUntilVisible:
+    element:
+      id: "product-reviews"
+    direction: DOWN
+- assertNotVisible:
+    id: "product-recommendations"
+- assertNotVisible: "Customers also bought"
