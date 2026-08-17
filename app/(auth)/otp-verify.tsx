@@ -19,7 +19,13 @@ import {
 import { mergeGuestCart } from "../../src/lib/cart-api";
 
 export default function OtpVerifyScreen() {
-  const { phone, channel } = useLocalSearchParams<{ phone: string; channel: OtpChannel }>();
+  // `referralCode` was already validated and normalised on the signup screen;
+  // this screen only has to carry it into the call that creates the account.
+  const { phone, channel, referralCode } = useLocalSearchParams<{
+    phone: string;
+    channel: OtpChannel;
+    referralCode?: string;
+  }>();
   const setUser = useAuthStore((state) => state.setUser);
   const [code, setCode] = useState("");
   const [timer, setTimer] = useState<OtpTimerState>(() => createOtpTimerState());
@@ -85,7 +91,13 @@ export default function OtpVerifyScreen() {
         </View>
 
         <Pressable
-          onPress={() => verifyMutation.mutate({ phone, code })}
+          onPress={() =>
+            verifyMutation.mutate({
+              phone,
+              code,
+              ...(referralCode ? { referralCode } : {}),
+            })
+          }
           disabled={verifyMutation.isPending || code.length !== 6 || expired}
           className="items-center rounded-lg bg-black py-3 disabled:opacity-50"
         >

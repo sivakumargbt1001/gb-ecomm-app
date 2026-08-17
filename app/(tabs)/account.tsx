@@ -6,6 +6,7 @@ import { useAuthStore } from "../../src/lib/auth-store";
 import { logout as logoutRequest } from "../../src/lib/auth-api";
 import { setAuthToken } from "../../src/lib/api-client";
 import { clearTokens, loadTokens } from "../../src/lib/token-storage";
+import { ReferralCard } from "../../src/components/account/referral-card";
 
 export default function AccountScreen() {
   const user = useAuthStore((state) => state.user);
@@ -39,8 +40,9 @@ export default function AccountScreen() {
   }
 
   return (
-    <View className="flex-1 items-center justify-center space-y-4 bg-white">
+    <View className="flex-1 items-center justify-center gap-4 bg-white p-6">
       <Text className="text-lg font-semibold">{user.email ?? user.phone}</Text>
+      <ReferralCard />
       <Pressable
         onPress={() => logoutMutation.mutate()}
         disabled={logoutMutation.isPending}

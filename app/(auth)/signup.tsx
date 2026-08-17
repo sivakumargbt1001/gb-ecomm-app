@@ -12,6 +12,8 @@ import {
 } from "@geekbase-labs/shared-types";
 
 import { requestOtp, signupWithEmail } from "../../src/lib/auth-api";
+import { ReferralCodeField } from "../../src/components/auth/referral-code-field";
+import { signupReferralCode } from "../../src/lib/referral";
 
 type Method = "email" | "phone";
 
@@ -19,6 +21,11 @@ export default function SignupScreen() {
   const [method, setMethod] = useState<Method>("email");
   const [emailSignupSuccess, setEmailSignupSuccess] = useState(false);
   const [signedUpEmail, setSignedUpEmail] = useState("");
+  // Held on the screen rather than in either form: the same code has to reach an
+  // email signup and a phone signup, and the phone path only claims it on the
+  // next screen, at OTP verification.
+  const [referralCode, setReferralCode] = useState("");
+  const [referralError, setReferralError] = useState<string | null>(null);
 
   const emailForm = useForm<SignupEmailInput>({
     resolver: zodResolver(SignupEmailSchema),
@@ -41,18 +48,45 @@ export default function SignupScreen() {
   const requestOtpMutation = useMutation({
     mutationFn: requestOtp,
     onSuccess: (_, variables) => {
+      const referral = signupReferralCode(referralCode);
       router.push({
         pathname: "/(auth)/otp-verify",
-        params: { phone: variables.phone, channel: variables.channel },
+        params: {
+          phone: variables.phone,
+          channel: variables.channel,
+          // Carried to the next screen because that is where the account is
+          // actually created, and attribution is claimed at creation.
+          ...(referral.ok && referral.code ? { referralCode: referral.code } : {}),
+        },
       });
     },
   });
+
+  // A code that cannot be a code is refused here rather than at the server: the
+  // signup would succeed either way, and the shopper would silently lose the
+  // attribution they were sent a link for.
+  function withReferral<T extends object>(
+    submit: (data: T & { referralCode?: string }) => void,
+  ) {
+    return (data: T) => {
+      const referral = signupReferralCode(referralCode);
+      if (!referral.ok) {
+        setReferralError(referral.error);
+        return;
+      }
+      setReferralError(null);
+      submit({ ...data, ...(referral.code ? { referralCode: referral.code } : {}) });
+    };
+  }
 
   if (emailSignupSuccess) {
     return (
       <View className="flex-1 items-center justify-center bg-white p-6">
         <View className="w-full max-w-md space-y-4 rounded-2xl border border-gray-200 bg-white p-8">
-          <Text className="text-center text-2xl font-bold text-gray-900">
+          <Text
+            testID="signup-verify-notice"
+            className="text-center text-2xl font-bold text-gray-900"
+          >
             Verify Your Email
           </Text>
           <Text className="text-center text-sm text-gray-500">
@@ -133,6 +167,7 @@ export default function SignupScreen() {
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
+                    testID="signup-email"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -157,6 +192,7 @@ export default function SignupScreen() {
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <TextInput
+                    testID="signup-password"
                     value={value}
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -174,9 +210,18 @@ export default function SignupScreen() {
               )}
             </View>
 
+            <ReferralCodeField
+              value={referralCode}
+              onChange={setReferralCode}
+              error={referralError}
+            />
+
             <Pressable
-              onPress={emailForm.handleSubmit((data) => signupEmailMutation.mutate(data))}
+              onPress={emailForm.handleSubmit(
+                withReferral((data: SignupEmailInput) => signupEmailMutation.mutate(data)),
+              )}
               disabled={signupEmailMutation.isPending}
+              testID="signup-submit"
               className="items-center rounded-lg bg-black py-3 disabled:opacity-50"
             >
               <Text className="font-semibold text-white">
@@ -253,8 +298,18 @@ export default function SignupScreen() {
               />
             </View>
 
+            <ReferralCodeField
+              value={referralCode}
+              onChange={setReferralCode}
+              error={referralError}
+            />
+
             <Pressable
-              onPress={phoneForm.handleSubmit((data) => requestOtpMutation.mutate(data))}
+              onPress={phoneForm.handleSubmit(
+                withReferral((data: RequestOtpInput) =>
+                  requestOtpMutation.mutate({ phone: data.phone, channel: data.channel }),
+                ),
+              )}
               disabled={requestOtpMutation.isPending}
               className="items-center rounded-lg bg-black py-3 disabled:opacity-50"
             >
