@@ -9,6 +9,12 @@ import { apiFetch, setAuthToken } from "../src/lib/api-client";
 import { useAuthStore } from "../src/lib/auth-store";
 import { SiteThemeProvider } from "../src/lib/site-theme-context";
 import { loadTokens } from "../src/lib/token-storage";
+import { usePushRegistration } from "../src/lib/use-push-registration";
+
+function PushRegistrar() {
+  usePushRegistration();
+  return null;
+}
 
 function AuthInitializer() {
   const setUser = useAuthStore((state) => state.setUser);
@@ -59,6 +65,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SiteThemeProvider>
         <AuthInitializer />
+        <PushRegistrar />
         <Stack screenOptions={{ headerShown: false }} />
         <StatusBar style="auto" />
       </SiteThemeProvider>

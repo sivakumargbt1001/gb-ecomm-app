@@ -6,6 +6,7 @@ import { useAuthStore } from "../../src/lib/auth-store";
 import { logout as logoutRequest } from "../../src/lib/auth-api";
 import { setAuthToken } from "../../src/lib/api-client";
 import { clearTokens, loadTokens } from "../../src/lib/token-storage";
+import { detachPushDevice } from "../../src/lib/push-registration";
 import { ReferralCard } from "../../src/components/account/referral-card";
 
 export default function AccountScreen() {
@@ -14,6 +15,10 @@ export default function AccountScreen() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // Drop the device first: this call rides the auth token onSettled is
+      // about to clear, and a phone that changes hands must stop receiving the
+      // last shopper's order pushes.
+      await detachPushDevice();
       const tokens = await loadTokens();
       if (tokens) {
         await logoutRequest({ refreshToken: tokens.refreshToken });
