@@ -44,3 +44,4 @@ yarn-error.*
 .maestro/.loyalty-seed.env
 .maestro/.referral-seed.env
 .maestro/.recommendations-seed.env
+.maestro/.search-seed.env

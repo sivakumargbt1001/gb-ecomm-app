@@ -1,0 +1,103 @@
+# Phase 12.8 — Mobile search E2E (Maestro)
+#
+# Push receipt is *not* automated here: per 12.6 it is verified by hand on a
+# device, because a real APNs/FCM delivery is not something Maestro can wait for.
+# So this flow is the search half of 12.8 in full, and 12.6's checklist owns the
+# other half.
+#
+# `scripts/seed-search.mjs` owns *what* should be found — it creates the
+# products, the pin and the synonym, and asserts the ranking. This flow owns that
+# the screen shows it: the box is reachable, results appear, a merchandised
+# product a shopper could never have matched by typing shows up anyway, a miss
+# says so, and a result is a way into the product.
+#
+# Result *ordering* is deliberately not asserted here. Maestro can say an element
+# is visible, not that it sits above another in a list — the pin-goes-first
+# assertion lives in the seed script (same split as `recommendations.yaml`).
+#
+# Prerequisites:
+#   - backend up at 127.0.0.1:8787 (ENVIRONMENT=development), reachable from the
+#     emulator — the app reads EXPO_PUBLIC_API_BASE_URL, which on an Android
+#     emulator must be http://10.0.2.2:8787, not localhost;
+#   - the app installed on a simulator/emulator. The appId below is the Expo Go
+#     container; for a standalone/dev build, replace it with this app's real
+#     bundle id.
+#
+# Run:
+#   node .maestro/scripts/seed-search.mjs   # prints the command below
+#   maestro test -e SEARCH_QUERY="tshirt" -e SEARCH_SYNONYM_QUERY="tee" \
+#     -e SEARCH_EMPTY_QUERY="zzqqxxnothing" -e SEARCH_MATCH="Srch Cotton Tshirt" \
+#     -e SEARCH_PINNED="Srch Wall Clock" -e SEARCH_ABSENT="Srch Copper Kettle" \
+#     .maestro/search.yaml
+#   node .maestro/scripts/seed-search.mjs --reset
+appId: host.exp.Exponent
+---
+# ---- 1. Search is reachable from the catalogue, and starts by asking. ----
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: "product-list"
+- tapOn:
+    id: "search-open"
+
+- assertVisible:
+    id: "search-input"
+# An empty box has not searched for anything yet — no spinner, no "no results".
+- assertVisible: "Type to search the catalogue."
+
+# ---- 2. Typing finds the product, and only what matches. ----
+- tapOn:
+    id: "search-input"
+- inputText: ${SEARCH_QUERY}
+
+- assertVisible:
+    id: "search-results"
+- assertVisible: ${SEARCH_MATCH}
+
+# The merchandising is the whole point of this assertion: this product's name has
+# no word in common with the query, so the only thing that can put it on screen
+# is the admin's pin.
+- assertVisible: ${SEARCH_PINNED}
+
+# ...and a product that matches nothing stays off the page.
+- assertNotVisible: ${SEARCH_ABSENT}
+
+# ---- 3. A synonym reaches a product by a word its name never uses. ----
+- eraseText
+- inputText: ${SEARCH_SYNONYM_QUERY}
+
+- assertVisible:
+    id: "search-results"
+- assertVisible: ${SEARCH_MATCH}
+# The pin was made for the other query. Widening a term must not drag its
+# merchandising along.
+- assertNotVisible: ${SEARCH_PINNED}
+
+# ---- 4. A miss says so, rather than showing an empty grid. ----
+- eraseText
+- inputText: ${SEARCH_EMPTY_QUERY}
+
+- assertVisible:
+    id: "search-message"
+- assertVisible: "No products match"
+- assertNotVisible:
+    id: "search-results"
+- assertNotVisible: ${SEARCH_MATCH}
+- assertNotVisible: ${SEARCH_PINNED}
+
+# ---- 5. A result is a way into the product, and back. ----
+- eraseText
+- inputText: ${SEARCH_QUERY}
+- assertVisible: ${SEARCH_MATCH}
+- tapOn: ${SEARCH_MATCH}
+
+- assertVisible:
+    id: "product-detail"
+- assertVisible: ${SEARCH_MATCH}
+
+# Coming back leaves the shopper on their results, not at the top of the app.
+- back
+- assertVisible:
+    id: "search-results"
+- assertVisible: ${SEARCH_MATCH}
