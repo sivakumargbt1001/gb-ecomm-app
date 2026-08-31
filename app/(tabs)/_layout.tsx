@@ -1,4 +1,5 @@
-import { Tabs } from "expo-router";
+import { Pressable, Text } from "react-native";
+import { Link, Tabs } from "expo-router";
 
 import { SiteBrand } from "../../src/components/site-brand";
 import { useCart } from "../../src/lib/use-cart";
@@ -17,7 +18,21 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: "Home", headerTitle: () => <SiteBrand /> }}
+        options={{
+          title: "Home",
+          headerTitle: () => <SiteBrand />,
+          headerRight: () => (
+            <Link href="/search" asChild>
+              <Pressable
+                testID="search-open"
+                className="px-4"
+                accessibilityLabel="Search products"
+              >
+                <Text className="text-lg">🔍</Text>
+              </Pressable>
+            </Link>
+          ),
+        }}
       />
       <Tabs.Screen name="wishlist" options={{ title: "Wishlist" }} />
       <Tabs.Screen
