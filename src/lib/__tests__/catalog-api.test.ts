@@ -16,6 +16,11 @@ function makeProduct(variants: { stock: number }[]): Product {
     priceInPaise: 1000,
     currency: "INR",
     isActive: true,
+    ownerUserId: null,
+    approvalStatus: "approved" as const,
+    rejectionReason: null,
+    submittedAt: null,
+    reviewedAt: null,
     createdAt: "2026-07-02T00:00:00.000Z",
     variants: variants.map((v, i) => ({
       id: `44444444-4444-4444-8444-00000000000${i}`,
