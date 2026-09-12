@@ -15,6 +15,7 @@ import { PromoBannerRail } from "../../src/components/storefront/promo-banner-ra
 import { fetchCategories, fetchProducts } from "../../src/lib/catalog-api";
 
 const SORTS: { value: ProductSort; label: string }[] = [
+  { value: "relevance", label: "Relevance" },
   { value: "newest", label: "Newest" },
   { value: "price_asc", label: "Price ↑" },
   { value: "price_desc", label: "Price ↓" },
@@ -23,7 +24,7 @@ const SORTS: { value: ProductSort; label: string }[] = [
 
 export default function CatalogScreen() {
   const [categorySlug, setCategorySlug] = useState<string | undefined>();
-  const [sort, setSort] = useState<ProductSort>("newest");
+  const [sort, setSort] = useState<ProductSort>("relevance");
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],

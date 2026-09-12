@@ -27,7 +27,7 @@ export function buildProductQueryString(query: CatalogQuery): string {
   const params = new URLSearchParams();
   params.set("page", String(query.page ?? 1));
   params.set("pageSize", String(query.pageSize ?? 24));
-  params.set("sort", query.sort ?? "newest");
+  params.set("sort", query.sort ?? "relevance");
   if (query.categorySlug) params.set("categorySlug", query.categorySlug);
   if (query.inStock) params.set("inStock", "true");
   return `?${params.toString()}`;

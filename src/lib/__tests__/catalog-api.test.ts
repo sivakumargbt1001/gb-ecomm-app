@@ -37,7 +37,7 @@ function makeProduct(variants: { stock: number }[]): Product {
 
 describe("buildProductQueryString", () => {
   it("applies defaults", () => {
-    expect(buildProductQueryString({})).toBe("?page=1&pageSize=24&sort=newest");
+    expect(buildProductQueryString({})).toBe("?page=1&pageSize=24&sort=relevance");
   });
 
   it("includes category, sort, and inStock when set", () => {

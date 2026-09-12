@@ -84,10 +84,15 @@ function BannerCard({
   width: number;
   active: boolean;
 }) {
-  const height = Math.round(width * 1.1);
+  // Same tall 5:8 tile as the website rail.
+  const height = Math.round((width * 8) / 5);
   const open = () => {
     if (banner.linkUrl) void Linking.openURL(banner.linkUrl);
   };
+  // The admin picked whichever colour reads on the artwork; the scrim behind
+  // the words follows it.
+  const light = banner.textColor !== "white";
+  const textStyle = { color: light ? "#000000" : "#ffffff" } as const;
 
   return (
     <Pressable
@@ -112,13 +117,13 @@ function BannerCard({
         <View
           pointerEvents="none"
           className="absolute inset-x-0 top-0 p-4"
-          style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+          style={{ backgroundColor: light ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.55)" }}
         >
           {banner.title && (
-            <Text className="text-2xl font-bold text-white">{banner.title}</Text>
+            <Text className="text-2xl font-black" style={textStyle}>{banner.title}</Text>
           )}
           {banner.subtitle && (
-            <Text className="mt-1 text-sm text-white">{banner.subtitle}</Text>
+            <Text className="mt-1 text-sm font-black" style={textStyle}>{banner.subtitle}</Text>
           )}
         </View>
       )}
@@ -128,23 +133,86 @@ function BannerCard({
 
 function BannerVideo({ url, active }: { url: string; active: boolean }) {
   const player = useVideoPlayer(url, (instance) => {
-    instance.loop = true;
+    instance.loop = false;
     instance.muted = true;
   });
+  // A viewer's pause outlives scrolling: a card they stopped stays stopped
+  // when it comes back on screen. A video plays through once and then rests
+  // on its last frame until the viewer replays it.
+  const [paused, setPaused] = useState(false);
+  const [ended, setEnded] = useState(false);
+
+  useEffect(() => {
+    const subscription = player.addListener("playToEnd", () => setEnded(true));
+    return () => subscription.remove();
+  }, [player]);
 
   // Play and pause follow visibility rather than mount, so a card scrolled
   // off the edge stops burning battery and data.
   useEffect(() => {
-    if (active) player.play();
+    if (active && !paused && !ended) player.play();
     else player.pause();
-  }, [active, player]);
+  }, [active, paused, ended, player]);
+
+  const replay = () => {
+    setPaused(false);
+    setEnded(false);
+    player.replay();
+  };
 
   return (
-    <VideoView
-      player={player}
-      nativeControls={false}
-      contentFit="cover"
-      style={{ width: "100%", height: "100%" }}
-    />
+    <>
+      <VideoView
+        player={player}
+        nativeControls={false}
+        contentFit="cover"
+        style={{ width: "100%", height: "100%" }}
+      />
+      <View className="absolute bottom-3 left-3">
+        {ended ? (
+          <VideoControl
+            testID="promo-banner-replay"
+            label="Replay video"
+            glyph="↻"
+            onPress={replay}
+          />
+        ) : (
+          <VideoControl
+            testID="promo-banner-toggle"
+            label={paused ? "Play video" : "Pause video"}
+            glyph={paused ? "▶" : "❙❙"}
+            onPress={() => setPaused((value) => !value)}
+          />
+        )}
+      </View>
+    </>
+  );
+}
+
+// Nested inside the card's Pressable on purpose: RN routes the tap to the
+// innermost responder, so pressing a control never opens the banner's link.
+function VideoControl({
+  testID,
+  label,
+  glyph,
+  onPress,
+}: {
+  testID: string;
+  label: string;
+  glyph: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={6}
+      className="h-10 w-10 items-center justify-center rounded-full border border-white/60"
+      style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+    >
+      <Text className="text-sm font-bold text-white">{glyph}</Text>
+    </Pressable>
   );
 }
