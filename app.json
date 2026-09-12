@@ -17,14 +17,23 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.geekbaselab.gbecommapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-notifications"
-    ]
+      "expo-notifications",
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dd46cab1-89c5-4230-92f9-c2db6ec89b72"
+      }
+    }
   }
 }
