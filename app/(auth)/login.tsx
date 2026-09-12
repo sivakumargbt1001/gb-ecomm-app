@@ -14,14 +14,17 @@ import {
 import { loginWithEmail, requestOtp } from "../../src/lib/auth-api";
 import { setAuthToken } from "../../src/lib/api-client";
 import { useAuthStore } from "../../src/lib/auth-store";
+import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { saveTokens } from "../../src/lib/token-storage";
 import { mergeGuestCart } from "../../src/lib/cart-api";
 
 type Method = "email" | "phone";
 
 export default function LoginScreen() {
+  const { siteName } = useSiteTheme();
   const setUser = useAuthStore((state) => state.setUser);
-  const [method, setMethod] = useState<Method>("email");
+  // Mobile first: an OTP asks nothing of the shopper but the phone in hand.
+  const [method, setMethod] = useState<Method>("phone");
 
   const emailForm = useForm<LoginEmailInput>({
     resolver: zodResolver(LoginEmailSchema),
@@ -63,26 +66,11 @@ export default function LoginScreen() {
         <View className="space-y-1">
           <Text className="text-center text-3xl font-extrabold text-gray-900">Welcome Back</Text>
           <Text className="text-center text-sm text-gray-500">
-            Sign in to access your GB E-commerce account
+            Welcome back to {siteName}. Sign in with your mobile number or email.
           </Text>
         </View>
 
         <View className="flex-row rounded-lg bg-gray-100 p-1">
-          <Pressable
-            onPress={() => {
-              setMethod("email");
-              loginEmailMutation.reset();
-            }}
-            className={`flex-1 rounded-md py-2 ${method === "email" ? "bg-white" : ""}`}
-          >
-            <Text
-              className={`text-center text-sm font-semibold ${
-                method === "email" ? "text-gray-900" : "text-gray-500"
-              }`}
-            >
-              Email Login
-            </Text>
-          </Pressable>
           <Pressable
             onPress={() => {
               setMethod("phone");
@@ -95,7 +83,22 @@ export default function LoginScreen() {
                 method === "phone" ? "text-gray-900" : "text-gray-500"
               }`}
             >
-              Phone / OTP
+              Mobile number
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setMethod("email");
+              loginEmailMutation.reset();
+            }}
+            className={`flex-1 rounded-md py-2 ${method === "email" ? "bg-white" : ""}`}
+          >
+            <Text
+              className={`text-center text-sm font-semibold ${
+                method === "email" ? "text-gray-900" : "text-gray-500"
+              }`}
+            >
+              Email
             </Text>
           </Pressable>
         </View>
@@ -185,7 +188,7 @@ export default function LoginScreen() {
             )}
 
             <View className="space-y-2">
-              <Text className="text-sm font-medium text-gray-900">Phone Number</Text>
+              <Text className="text-sm font-medium text-gray-900">Mobile number</Text>
               <Controller
                 control={phoneForm.control}
                 name="phone"

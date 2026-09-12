@@ -9,7 +9,7 @@ export function fallbackSettings(): SiteSettings {
   return {
     ...DEFAULT_SITE_SETTINGS,
     socialLinks: {},
-    promoBanner: null,
+    promoBanners: [],
     updatedAt: new Date(0).toISOString(),
   };
 }

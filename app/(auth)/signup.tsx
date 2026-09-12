@@ -12,13 +12,16 @@ import {
 } from "@geekbase-labs/shared-types";
 
 import { requestOtp, signupWithEmail } from "../../src/lib/auth-api";
+import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { ReferralCodeField } from "../../src/components/auth/referral-code-field";
 import { signupReferralCode } from "../../src/lib/referral";
 
 type Method = "email" | "phone";
 
 export default function SignupScreen() {
-  const [method, setMethod] = useState<Method>("email");
+  const { siteName } = useSiteTheme();
+  // Mobile first: an OTP asks nothing of the shopper but the phone in hand.
+  const [method, setMethod] = useState<Method>("phone");
   const [emailSignupSuccess, setEmailSignupSuccess] = useState(false);
   const [signedUpEmail, setSignedUpEmail] = useState("");
   // Held on the screen rather than in either form: the same code has to reach an
@@ -115,26 +118,11 @@ export default function SignupScreen() {
             Create Account
           </Text>
           <Text className="text-center text-sm text-gray-500">
-            Sign up to start shopping on GB E-commerce
+            Join {siteName}. Your mobile number is all it takes.
           </Text>
         </View>
 
         <View className="flex-row rounded-lg bg-gray-100 p-1">
-          <Pressable
-            onPress={() => {
-              setMethod("email");
-              signupEmailMutation.reset();
-            }}
-            className={`flex-1 rounded-md py-2 ${method === "email" ? "bg-white" : ""}`}
-          >
-            <Text
-              className={`text-center text-sm font-semibold ${
-                method === "email" ? "text-gray-900" : "text-gray-500"
-              }`}
-            >
-              Email Signup
-            </Text>
-          </Pressable>
           <Pressable
             onPress={() => {
               setMethod("phone");
@@ -147,7 +135,22 @@ export default function SignupScreen() {
                 method === "phone" ? "text-gray-900" : "text-gray-500"
               }`}
             >
-              Phone / OTP
+              Mobile number
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              setMethod("email");
+              signupEmailMutation.reset();
+            }}
+            className={`flex-1 rounded-md py-2 ${method === "email" ? "bg-white" : ""}`}
+          >
+            <Text
+              className={`text-center text-sm font-semibold ${
+                method === "email" ? "text-gray-900" : "text-gray-500"
+              }`}
+            >
+              Email
             </Text>
           </Pressable>
         </View>
@@ -238,7 +241,7 @@ export default function SignupScreen() {
             )}
 
             <View className="space-y-2">
-              <Text className="text-sm font-medium text-gray-900">Phone Number</Text>
+              <Text className="text-sm font-medium text-gray-900">Mobile number</Text>
               <Controller
                 control={phoneForm.control}
                 name="phone"

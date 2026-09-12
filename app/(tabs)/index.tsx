@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ProductSort } from "@geekbase-labs/shared-types";
 
 import { ProductCard } from "../../src/components/catalog/product-card";
+import { PromoBannerRail } from "../../src/components/storefront/promo-banner-rail";
 import { fetchCategories, fetchProducts } from "../../src/lib/catalog-api";
 
 const SORTS: { value: ProductSort; label: string }[] = [
@@ -36,6 +37,8 @@ export default function CatalogScreen() {
 
   return (
     <View className="flex-1 bg-white">
+      <PromoBannerRail />
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
