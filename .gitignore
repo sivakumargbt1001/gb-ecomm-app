@@ -45,3 +45,6 @@ yarn-error.*
 .maestro/.referral-seed.env
 .maestro/.recommendations-seed.env
 .maestro/.search-seed.env
+
+# Local Expo env; EXPO_PUBLIC_* values are set per build, not committed.
+.env
