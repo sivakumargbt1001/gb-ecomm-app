@@ -184,6 +184,14 @@ export default function ProductDetailScreen() {
 
         <View className="gap-6 p-5">
           <View className="gap-1">
+            {product.brand ? (
+              <Text
+                testID="product-brand"
+                className="text-xs uppercase tracking-wide text-neutral-500"
+              >
+                {product.brand}
+              </Text>
+            ) : null}
             <View className="flex-row items-start justify-between gap-4">
               <Text className="flex-1 text-2xl font-semibold text-neutral-900">
                 {product.name}
@@ -196,6 +204,14 @@ export default function ProductDetailScreen() {
               )}
             </Text>
           </View>
+
+          {product.condition !== "new" ? (
+            <View className="self-start rounded-full bg-amber-50 px-3 py-1">
+              <Text testID="product-condition" className="text-xs font-medium text-amber-800">
+                {product.condition === "refurbished" ? "Refurbished" : "Pre-owned"}
+              </Text>
+            </View>
+          ) : null}
 
           {product.description ? (
             <Text className="text-neutral-600">{product.description}</Text>

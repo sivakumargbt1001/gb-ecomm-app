@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Pimkart",
+    "description": "Online shopping site in India: Shop online for Fashion, Dresses, Gift items and More - Pimkart",
     "slug": "gb-ecomm-app",
     "version": "1.0.0",
     "scheme": "gbecomm",

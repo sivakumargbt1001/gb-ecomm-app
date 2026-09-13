@@ -44,6 +44,14 @@ export function ProductCard({
             )}
           </View>
           <View className="gap-1 p-3">
+            {product.brand ? (
+              <Text
+                numberOfLines={1}
+                className="text-xs uppercase tracking-wide text-neutral-500"
+              >
+                {product.brand}
+              </Text>
+            ) : null}
             <Text numberOfLines={2} className="font-medium text-neutral-900">
               {product.name}
             </Text>

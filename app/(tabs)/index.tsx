@@ -36,6 +36,12 @@ export default function CatalogScreen() {
     queryFn: () => fetchProducts({ categorySlug, sort }),
   });
 
+  // The selected category's intro, the same words the website shows above
+  // its grid, so a shopper on either sees the same page.
+  const selectedCategory = categorySlug
+    ? categoriesQuery.data?.find((category) => category.slug === categorySlug)
+    : undefined;
+
   return (
     <View className="flex-1 bg-white">
       <PromoBannerRail />
@@ -76,6 +82,16 @@ export default function CatalogScreen() {
           />
         ))}
       </ScrollView>
+
+      {selectedCategory?.description ? (
+        <Text
+          testID="category-intro"
+          className="border-b border-neutral-100 px-4 py-3 text-sm leading-5 text-neutral-600"
+          numberOfLines={3}
+        >
+          {selectedCategory.description}
+        </Text>
+      ) : null}
 
       {productsQuery.isLoading ? (
         <View className="flex-1 items-center justify-center">
