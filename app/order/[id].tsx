@@ -9,6 +9,7 @@ import {
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import type { OrderLineItem } from "@geekbase-labs/shared-types";
 
+import { OrderItemReview } from "../../src/components/orders/order-item-review";
 import { formatPaise } from "../../src/lib/catalog-api";
 import { useAuthStore } from "../../src/lib/auth-store";
 import {
@@ -46,7 +47,7 @@ function TimelineRow({ step }: { step: TimelineStep }) {
   );
 }
 
-function LineItem({ item }: { item: OrderLineItem }) {
+function LineItem({ item, delivered }: { item: OrderLineItem; delivered: boolean }) {
   const options = Object.values(item.customOptionValues);
 
   return (
@@ -64,6 +65,7 @@ function LineItem({ item }: { item: OrderLineItem }) {
             {options.join(", ")}
           </Text>
         ) : null}
+        {delivered ? <OrderItemReview productId={item.productId} /> : null}
       </View>
       <Text className="text-base font-semibold text-neutral-900">
         {formatPaise(item.unitPriceInPaise * item.quantity)}
@@ -166,7 +168,11 @@ export default function OrderDetailScreen() {
       <View className="border-t border-neutral-100 px-4 py-4">
         <Text className="mb-2 text-base font-semibold text-neutral-900">Items</Text>
         {order.items.map((item) => (
-          <LineItem key={item.id} item={item} />
+          <LineItem
+            key={item.id}
+            item={item}
+            delivered={order.status === "delivered"}
+          />
         ))}
         {order.loyaltyDiscountInPaise > 0 ? (
           <View className="flex-row items-center justify-between pt-3">

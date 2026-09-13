@@ -1,4 +1,5 @@
-import { Pressable, Text } from "react-native";
+import { useEffect } from "react";
+import { Alert, Pressable, Text } from "react-native";
 import { router } from "expo-router";
 
 import { useAuthStore } from "../../lib/auth-store";
@@ -17,7 +18,13 @@ export function WishlistHeart({
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
   const theme = useSiteTheme();
-  const { isSaved, isPending, toggle } = useWishlistToggle(productId);
+  const { isSaved, isPending, error, toggle } = useWishlistToggle(productId);
+
+  // A failed toggle used to leave the heart exactly as it was, which reads as
+  // "nothing happened" — say so instead.
+  useEffect(() => {
+    if (error) Alert.alert("Wishlist", "Could not update your wishlist. Please try again.");
+  }, [error]);
 
   // Showing an empty heart before the session resolves would tell a returning
   // shopper their saved products aren't saved.

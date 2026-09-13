@@ -11,6 +11,7 @@ import {
   type SignupEmailInput,
 } from "@geekbase-labs/shared-types";
 
+import { ConsentNotice } from "../../src/components/auth/consent-notice";
 import { requestOtp, signupWithEmail } from "../../src/lib/auth-api";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { ReferralCodeField } from "../../src/components/auth/referral-code-field";
@@ -37,7 +38,8 @@ export default function SignupScreen() {
 
   const phoneForm = useForm<RequestOtpInput>({
     resolver: zodResolver(RequestOtpSchema),
-    defaultValues: { phone: "", channel: "sms" },
+    // WhatsApp first; the OTP screen offers SMS as the fallback.
+    defaultValues: { phone: "", channel: "whatsapp" },
   });
 
   const signupEmailMutation = useMutation({
@@ -263,44 +265,6 @@ export default function SignupScreen() {
               )}
             </View>
 
-            <View className="space-y-2">
-              <Text className="text-sm font-medium text-gray-900">Choose Channel</Text>
-              <Controller
-                control={phoneForm.control}
-                name="channel"
-                render={({ field: { onChange, value } }) => (
-                  <View className="flex-row space-x-3">
-                    <Pressable
-                      onPress={() => onChange("sms")}
-                      className={`flex-1 items-center rounded-lg border py-3 ${
-                        value === "sms" ? "border-black bg-gray-100" : "border-gray-300"
-                      }`}
-                    >
-                      <Text
-                        className={`font-semibold ${value === "sms" ? "text-black" : "text-gray-500"}`}
-                      >
-                        SMS
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => onChange("whatsapp")}
-                      className={`flex-1 items-center rounded-lg border py-3 ${
-                        value === "whatsapp" ? "border-black bg-gray-100" : "border-gray-300"
-                      }`}
-                    >
-                      <Text
-                        className={`font-semibold ${
-                          value === "whatsapp" ? "text-black" : "text-gray-500"
-                        }`}
-                      >
-                        WhatsApp
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
-              />
-            </View>
-
             <ReferralCodeField
               value={referralCode}
               onChange={setReferralCode}
@@ -317,11 +281,13 @@ export default function SignupScreen() {
               className="items-center rounded-lg bg-black py-3 disabled:opacity-50"
             >
               <Text className="font-semibold text-white">
-                {requestOtpMutation.isPending ? "Sending OTP..." : "Send Verification Code"}
+                {requestOtpMutation.isPending ? "Sending OTP..." : "Send OTP on WhatsApp"}
               </Text>
             </Pressable>
           </View>
         )}
+
+        <ConsentNotice />
 
         <Link href="/(auth)/login" asChild>
           <Pressable className="items-center rounded-lg border border-gray-300 py-3">

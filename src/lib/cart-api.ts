@@ -110,6 +110,12 @@ export async function updateAddress(
   return data.address;
 }
 
+export async function deleteAddress(id: string): Promise<void> {
+  await apiFetch<void>(`/api/cart/addresses/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function uploadOptionFile(file: {
   uri: string;
   name: string;

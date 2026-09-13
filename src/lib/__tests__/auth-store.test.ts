@@ -13,10 +13,12 @@ describe("auth-store", () => {
   it("setUser marks the store authenticated when given a user", () => {
     const user = {
       id: "11111111-1111-4111-8111-111111111111",
+      name: null,
       email: "shopper@example.com",
       phone: null,
       emailVerified: false,
       phoneVerified: false,
+      hasPassword: false,
       role: "customer" as const,
       createdAt: "2026-07-02T00:00:00.000Z",
     };
@@ -38,10 +40,12 @@ describe("auth-store", () => {
     useAuthStore.setState({
       user: {
         id: "11111111-1111-4111-8111-111111111111",
+        name: null,
         email: "shopper@example.com",
         phone: null,
         emailVerified: false,
         phoneVerified: false,
+        hasPassword: false,
         role: "customer",
         createdAt: "2026-07-02T00:00:00.000Z",
       },

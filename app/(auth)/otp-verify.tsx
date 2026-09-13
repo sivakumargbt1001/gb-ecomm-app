@@ -18,14 +18,22 @@ import {
 } from "../../src/lib/otp-timer";
 import { mergeGuestCart } from "../../src/lib/cart-api";
 
+const CHANNEL_LABEL: Record<OtpChannel, string> = {
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+};
+
 export default function OtpVerifyScreen() {
   // `referralCode` was already validated and normalised on the signup screen;
   // this screen only has to carry it into the call that creates the account.
-  const { phone, channel, referralCode } = useLocalSearchParams<{
+  const { phone, channel: initialChannel, referralCode } = useLocalSearchParams<{
     phone: string;
     channel: OtpChannel;
     referralCode?: string;
   }>();
+  // WhatsApp is tried first; a shopper it does not reach switches to SMS from
+  // here, and every later resend goes to wherever the code last went.
+  const [channel, setChannel] = useState<OtpChannel>(initialChannel);
   const setUser = useAuthStore((state) => state.setUser);
   const [code, setCode] = useState("");
   const [timer, setTimer] = useState<OtpTimerState>(() => createOtpTimerState());
@@ -50,7 +58,8 @@ export default function OtpVerifyScreen() {
 
   const resendMutation = useMutation({
     mutationFn: requestOtp,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      setChannel(variables.channel);
       setTimer(createOtpTimerState());
       setCode("");
     },
@@ -66,9 +75,13 @@ export default function OtpVerifyScreen() {
     >
       <View className="w-full max-w-md space-y-6 self-center rounded-2xl border border-gray-200 bg-white p-8">
         <View className="space-y-1">
-          <Text className="text-center text-2xl font-bold text-gray-900">Verify Phone</Text>
+          <Text className="text-center text-2xl font-bold text-gray-900">Verify your number</Text>
           <Text className="text-center text-sm text-gray-500">
-            We sent a verification code to <Text className="font-semibold text-gray-900">{phone}</Text>
+            We&apos;ve sent a one-time password (OTP) to
+          </Text>
+          <Text className="text-center text-sm text-gray-900" testID="otp-destination">
+            <Text className="font-semibold">{phone}</Text> on{" "}
+            <Text className="font-semibold">{CHANNEL_LABEL[channel]}</Text>
           </Text>
         </View>
 
@@ -79,7 +92,7 @@ export default function OtpVerifyScreen() {
         )}
 
         <View className="space-y-2">
-          <Text className="text-sm font-medium text-gray-900">Verification Code</Text>
+          <Text className="text-sm font-medium text-gray-900">Enter OTP</Text>
           <TextInput
             value={code}
             onChangeText={(value) => setCode(value.replace(/[^0-9]/g, "").slice(0, 6))}
@@ -130,10 +143,28 @@ export default function OtpVerifyScreen() {
               {resendMutation.isPending
                 ? "Resending..."
                 : canResend(timer)
-                  ? "Resend Code"
-                  : `Resend code in ${timer.cooldownSeconds}s`}
+                  ? "Didn't receive the OTP? Resend"
+                  : `Didn't receive the OTP? Resend in ${timer.cooldownSeconds}s`}
             </Text>
           </Pressable>
+
+          {channel === "whatsapp" ? (
+            <>
+              <View className="w-full flex-row items-center gap-3 py-1">
+                <View className="h-px flex-1 bg-gray-200" />
+                <Text className="text-xs text-gray-500">or</Text>
+                <View className="h-px flex-1 bg-gray-200" />
+              </View>
+              <Pressable
+                testID="otp-send-sms"
+                onPress={() => resendMutation.mutate({ phone, channel: "sms" })}
+                disabled={resendMutation.isPending || verifyMutation.isPending}
+                className="w-full items-center rounded-lg border border-gray-300 py-3 disabled:opacity-50"
+              >
+                <Text className="font-semibold text-gray-900">Send OTP by SMS</Text>
+              </Pressable>
+            </>
+          ) : null}
         </View>
       </View>
     </ScrollView>

@@ -57,3 +57,81 @@ describe("apiFetch", () => {
     await expect(apiFetch("/health")).rejects.toThrow("API request failed: 500");
   });
 });
+
+jest.mock("expo-secure-store");
+
+describe("apiFetch session refresh", () => {
+  const SecureStore = jest.requireMock("expo-secure-store") as {
+    getItemAsync: jest.Mock;
+    setItemAsync: jest.Mock;
+    deleteItemAsync: jest.Mock;
+  };
+
+  function response(status: number, body: unknown = {}) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      statusText: String(status),
+      json: async () => body,
+    };
+  }
+
+  beforeEach(() => {
+    setAuthToken("stale-token");
+    SecureStore.getItemAsync.mockImplementation(async (key: string) =>
+      key === "auth_access_token" ? "stale-token" : "refresh-1",
+    );
+    SecureStore.setItemAsync.mockResolvedValue(undefined);
+    SecureStore.deleteItemAsync.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    setAuthToken(null);
+    jest.restoreAllMocks();
+    SecureStore.getItemAsync.mockReset();
+    SecureStore.setItemAsync.mockReset();
+    SecureStore.deleteItemAsync.mockReset();
+  });
+
+  it("refreshes once and replays a request that got a 401", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(response(401))
+      .mockResolvedValueOnce(response(200, { accessToken: "fresh", refreshToken: "refresh-2" }))
+      .mockResolvedValueOnce(response(201, { item: { productId: "p1" } }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(apiFetch("/api/wishlist", { method: "POST", body: { productId: "p1" } }))
+      .resolves.toEqual({ item: { productId: "p1" } });
+
+    const paths = fetchMock.mock.calls.map(([url]) => new URL(url as string).pathname);
+    expect(paths).toEqual(["/api/wishlist", "/api/auth/refresh", "/api/wishlist"]);
+
+    const [, refreshInit] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(JSON.parse(refreshInit.body as string)).toEqual({ refreshToken: "refresh-1" });
+
+    const [, replayInit] = fetchMock.mock.calls[2] as [string, RequestInit];
+    expect((replayInit.headers as Record<string, string>).Authorization).toBe("Bearer fresh");
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith("auth_refresh_token", "refresh-2");
+  });
+
+  it("clears the stored session when the refresh token is revoked", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(response(401))
+      .mockResolvedValueOnce(response(401));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(apiFetch("/api/wishlist")).rejects.toThrow("API request failed: 401");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("auth_refresh_token");
+  });
+
+  it("never refreshes on behalf of an auth route", async () => {
+    const fetchMock = jest.fn().mockResolvedValueOnce(response(401));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(apiFetch("/api/auth/me")).rejects.toThrow("API request failed: 401");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
