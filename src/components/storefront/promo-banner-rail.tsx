@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -18,6 +18,9 @@ import { fetchSiteSettings } from "../../lib/site-settings-api";
 
 const GAP = 12;
 const SIDE = 16;
+// The rail advances on its own, marketplace style, and rests while a thumb
+// is on it.
+const AUTOPLAY_MS = 4000;
 
 // Module-level because FlatList refuses a viewability config that changes
 // after mount, and a constant cannot.
@@ -36,25 +39,47 @@ export function PromoBannerRail() {
   });
   const banners = data?.promoBanners ?? [];
   const [visibleIds, setVisibleIds] = useState<Set<string>>(() => new Set());
+  const listRef = useRef<FlatList<PromoBanner>>(null);
+  const indexRef = useRef(0);
+  const [paused, setPaused] = useState(false);
+  // Two tiles across, like the website's rail on a tablet: the tall 5:8 card
+  // at full phone width would fill the screen and push the grid below the fold.
+  const cardWidth = Math.round((width - SIDE * 2 - GAP) / 2);
+
+  useEffect(() => {
+    if (paused || banners.length < 2) return;
+    const timer = setInterval(() => {
+      const next = (indexRef.current + 1) % banners.length;
+      indexRef.current = next;
+      listRef.current?.scrollToOffset({
+        offset: next * (cardWidth + GAP),
+        animated: true,
+      });
+    }, AUTOPLAY_MS);
+    return () => clearInterval(timer);
+  }, [paused, banners.length, cardWidth]);
 
   // Only a card that is actually on screen plays its video.
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken<PromoBanner>[] }) => {
       setVisibleIds(new Set(viewableItems.map((token) => token.item.id)));
+      const first = viewableItems[0]?.index;
+      if (typeof first === "number") indexRef.current = first;
     },
     [],
   );
 
   if (banners.length === 0) return null;
 
-  // One card takes the full width; more than one shows a sliver of the next
-  // so the row reads as swipeable.
-  const cardWidth = banners.length === 1 ? width - SIDE * 2 : Math.round(width * 0.82);
 
   return (
     <FlatList
+      ref={listRef}
       testID="promo-banner-rail"
       horizontal
+      onScrollBeginDrag={() => setPaused(true)}
+      onMomentumScrollEnd={() => setPaused(false)}
+      onScrollEndDrag={() => setPaused(false)}
       data={banners}
       keyExtractor={(item) => item.id}
       showsHorizontalScrollIndicator={false}
@@ -116,14 +141,14 @@ function BannerCard({
       {(banner.title || banner.subtitle) && (
         <View
           pointerEvents="none"
-          className="absolute inset-x-0 top-0 p-4"
+          className="absolute inset-x-0 top-0 p-3"
           style={{ backgroundColor: light ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.55)" }}
         >
           {banner.title && (
-            <Text className="text-2xl font-black" style={textStyle}>{banner.title}</Text>
+            <Text className="text-lg font-black" style={textStyle}>{banner.title}</Text>
           )}
           {banner.subtitle && (
-            <Text className="mt-1 text-sm font-black" style={textStyle}>{banner.subtitle}</Text>
+            <Text className="mt-0.5 text-xs font-black" style={textStyle}>{banner.subtitle}</Text>
           )}
         </View>
       )}

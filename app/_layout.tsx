@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { LaunchSplash } from "../src/components/launch-splash";
 import { apiFetch, refreshSession, setAuthToken } from "../src/lib/api-client";
 import { useAuthStore } from "../src/lib/auth-store";
 import { SiteThemeProvider } from "../src/lib/site-theme-context";
@@ -78,6 +79,7 @@ export default function RootLayout() {
         <PushRegistrar />
         <Stack screenOptions={{ headerShown: false }} />
         <StatusBar style="auto" />
+        <LaunchSplash />
       </SiteThemeProvider>
     </QueryClientProvider>
   );

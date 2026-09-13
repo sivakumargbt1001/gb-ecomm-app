@@ -30,10 +30,23 @@
       "expo-secure-store",
       "expo-status-bar",
       [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Pimkart uses the microphone for voice search.",
+          "speechRecognitionPermission": "Pimkart uses speech recognition for voice search."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Pimkart uses your location to find your delivery pincode."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 260,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }

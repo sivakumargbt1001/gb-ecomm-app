@@ -1,30 +1,23 @@
-import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import type { ProductSort } from "@geekbase-labs/shared-types";
 
 import { ProductCard } from "../../src/components/catalog/product-card";
+import { DeliveryPicker } from "../../src/components/delivery/delivery-picker";
+import { SORTS } from "../../src/components/storefront/catalog-menu";
 import { PromoBannerRail } from "../../src/components/storefront/promo-banner-rail";
 import { fetchCategories, fetchProducts } from "../../src/lib/catalog-api";
-
-const SORTS: { value: ProductSort; label: string }[] = [
-  { value: "relevance", label: "Relevance" },
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price ↑" },
-  { value: "price_desc", label: "Price ↓" },
-  { value: "name_asc", label: "A–Z" },
-];
+import { useCatalogFilterStore } from "../../src/lib/catalog-filter-store";
+import { useSiteTheme } from "../../src/lib/site-theme-context";
 
 export default function CatalogScreen() {
-  const [categorySlug, setCategorySlug] = useState<string | undefined>();
-  const [sort, setSort] = useState<ProductSort>("relevance");
+  const theme = useSiteTheme();
+  const { categorySlug, sort, openMenu } = useCatalogFilterStore();
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
@@ -44,44 +37,33 @@ export default function CatalogScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <PromoBannerRail />
+      {theme.announcement ? (
+        <Text
+          testID="header-announcement"
+          className="bg-neutral-900 px-4 py-2 text-center text-xs tracking-wide text-white"
+        >
+          {theme.announcement}
+        </Text>
+      ) : null}
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="max-h-14 border-b border-neutral-100"
-        contentContainerStyle={{ alignItems: "center", gap: 8, paddingHorizontal: 16 }}
-      >
-        <Chip
-          label="All"
-          active={categorySlug === undefined}
-          onPress={() => setCategorySlug(undefined)}
-        />
-        {(categoriesQuery.data ?? []).map((category) => (
-          <Chip
-            key={category.id}
-            label={category.name}
-            active={categorySlug === category.slug}
-            onPress={() => setCategorySlug(category.slug)}
-          />
-        ))}
-      </ScrollView>
+      <DeliveryPicker />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="max-h-12 border-b border-neutral-100"
-        contentContainerStyle={{ alignItems: "center", gap: 8, paddingHorizontal: 16 }}
+      {/* What the grid is currently narrowed to; the ☰ button in the header
+          is where it changes. */}
+      <Pressable
+        testID="catalog-filter-summary"
+        onPress={openMenu}
+        accessibilityRole="button"
+        accessibilityLabel="Open menu"
+        className="flex-row items-center justify-between border-b border-neutral-100 px-4 py-2.5"
       >
-        {SORTS.map((option) => (
-          <Chip
-            key={option.value}
-            label={option.label}
-            active={sort === option.value}
-            onPress={() => setSort(option.value)}
-          />
-        ))}
-      </ScrollView>
+        <Text className="text-sm font-medium text-neutral-900" numberOfLines={1}>
+          {selectedCategory?.name ?? "All products"}
+        </Text>
+        <Text className="text-xs text-neutral-500">
+          {SORTS.find((option) => option.value === sort)?.label}
+        </Text>
+      </Pressable>
 
       {selectedCategory?.description ? (
         <Text
@@ -109,6 +91,7 @@ export default function CatalogScreen() {
           data={productsQuery.data?.items ?? []}
           keyExtractor={(item) => item.id}
           numColumns={2}
+          ListHeaderComponent={<PromoBannerRail />}
           contentContainerStyle={{ gap: 16, padding: 16 }}
           columnWrapperStyle={{ gap: 16 }}
           ListEmptyComponent={
@@ -125,25 +108,3 @@ export default function CatalogScreen() {
   );
 }
 
-function Chip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`rounded-full border px-3 py-1.5 ${
-        active ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
-      }`}
-    >
-      <Text className={active ? "text-sm text-white" : "text-sm text-neutral-700"}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}

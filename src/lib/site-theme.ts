@@ -7,6 +7,7 @@ import {
 export type SiteTheme = {
   siteName: string;
   logoUrl: string | null;
+  announcement: string;
   colors: {
     primary: string;
     secondary: string;
@@ -17,6 +18,7 @@ export type SiteTheme = {
 export const DEFAULT_SITE_THEME: SiteTheme = {
   siteName: DEFAULT_SITE_SETTINGS.siteName,
   logoUrl: DEFAULT_SITE_SETTINGS.logoUrl,
+  announcement: DEFAULT_SITE_SETTINGS.announcement,
   colors: {
     primary: DEFAULT_SITE_SETTINGS.primaryColor,
     secondary: DEFAULT_SITE_SETTINGS.secondaryColor,
@@ -37,6 +39,8 @@ export function themeFromSettings(settings: SiteSettings | undefined): SiteTheme
   return {
     siteName: settings.siteName.trim() || DEFAULT_SITE_THEME.siteName,
     logoUrl: settings.logoUrl,
+    // Admin-editable; an empty string drops the strip, as on the website.
+    announcement: settings.announcement.trim(),
     colors: {
       primary: safeColor(settings.primaryColor, DEFAULT_SITE_THEME.colors.primary),
       secondary: safeColor(
