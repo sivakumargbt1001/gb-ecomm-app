@@ -7,10 +7,13 @@ export async function listWishlist(): Promise<WishlistItem[]> {
   return data.items;
 }
 
-export async function addWishlistItem(productId: string): Promise<WishlistItem> {
+export async function addWishlistItem(
+  productId: string,
+  variantId: string | null = null,
+): Promise<WishlistItem> {
   const data = await apiFetch<{ item: WishlistItem }>("/api/wishlist", {
     method: "POST",
-    body: { productId },
+    body: { productId, variantId },
   });
   return data.item;
 }

@@ -42,6 +42,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       className="flex-1 bg-white"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
     >
@@ -72,6 +73,9 @@ export default function ForgotPasswordScreen() {
                 placeholder="name@example.com"
                 autoCapitalize="none"
                 keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                autoCorrect={false}
                 className="rounded-lg border border-gray-300 px-4 py-3"
               />
             )}

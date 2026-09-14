@@ -39,9 +39,20 @@ describe("wishlist-api", () => {
 
     expect(mockApiFetch).toHaveBeenCalledWith("/api/wishlist", {
       method: "POST",
-      body: { productId: PRODUCT_ID },
+      body: { productId: PRODUCT_ID, variantId: null },
     });
     expect(item).toEqual(MOCK_ITEM);
+  });
+
+  it("addWishlistItem carries the variant a bag line was saved with", async () => {
+    mockApiFetch.mockResolvedValue({ item: MOCK_ITEM });
+
+    await addWishlistItem(PRODUCT_ID, "v-1");
+
+    expect(mockApiFetch).toHaveBeenCalledWith("/api/wishlist", {
+      method: "POST",
+      body: { productId: PRODUCT_ID, variantId: "v-1" },
+    });
   });
 
   it("removeWishlistItem DELETEs the product from the caller's wishlist", async () => {

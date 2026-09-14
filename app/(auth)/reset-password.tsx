@@ -61,6 +61,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       className="flex-1 bg-white"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
     >
@@ -90,6 +91,8 @@ export default function ResetPasswordScreen() {
                 onBlur={onBlur}
                 placeholder="Minimum 8 characters"
                 secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
                 autoCapitalize="none"
                 className="rounded-lg border border-gray-300 px-4 py-3"
               />

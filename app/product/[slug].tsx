@@ -22,16 +22,23 @@ import { OptionField } from "../../src/components/catalog/option-field";
 import { ProductGallery } from "../../src/components/catalog/product-gallery";
 import { VariantPicker } from "../../src/components/catalog/variant-picker";
 import { ProductRecommendations } from "../../src/components/catalog/product-recommendations";
+import { ProductSpecs } from "../../src/components/catalog/product-specs";
+import { SoldByCard } from "../../src/components/catalog/sold-by-card";
+import { DeliveryDetails } from "../../src/components/delivery/delivery-details";
+import { ProductRating } from "../../src/components/reviews/product-rating";
 import { ProductReviews } from "../../src/components/reviews/product-reviews";
 import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
 import {
+  fetchCategories,
   fetchProduct,
   fetchProductOptionFields,
+  fetchProductSeller,
   formatPaise,
 } from "../../src/lib/catalog-api";
 import { trackEvent } from "../../src/lib/analytics";
 import { useTrackEvent } from "../../src/lib/use-track-event";
 import { useCart } from "../../src/lib/use-cart";
+import { useProductReviews } from "../../src/lib/use-reviews";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { uploadOptionFile } from "../../src/lib/cart-api";
 
@@ -49,6 +56,22 @@ export default function ProductDetailScreen() {
     queryFn: () => fetchProductOptionFields(slug),
     enabled: Boolean(slug),
   });
+
+  // The whole tree, for the spec fields each ancestor category adds; and who
+  // sells this. Neither holds the page up: both blocks appear when they land.
+  const categoriesQuery = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+  const sellerQuery = useQuery({
+    queryKey: ["product", slug, "seller"],
+    queryFn: () => fetchProductSeller(slug),
+    enabled: Boolean(slug),
+  });
+
+  // The rating line under the name; the reviews section further down reads
+  // the same query, so nothing is fetched twice.
+  const { summary: reviewSummary } = useProductReviews(productQuery.data?.id ?? "");
 
   const { add } = useCart();
   const theme = useSiteTheme();
@@ -89,6 +112,7 @@ export default function ProductDetailScreen() {
   }
 
   const product = productQuery.data;
+  const brand = product.brand;
   const optionFields = optionFieldsQuery.data ?? [];
   const variants = product.variants;
   const withOptions = hasVariantOptions(variants);
@@ -189,13 +213,18 @@ export default function ProductDetailScreen() {
 
         <View className="gap-6 p-5">
           <View className="gap-1">
-            {product.brand ? (
-              <Text
+            {brand ? (
+              <Pressable
                 testID="product-brand"
-                className="text-xs uppercase tracking-wide text-neutral-500"
+                onPress={() => router.push(`/brand/${encodeURIComponent(brand)}`)}
+                accessibilityRole="link"
+                accessibilityLabel={`See every ${brand} product`}
+                className="self-start"
               >
-                {product.brand}
-              </Text>
+                <Text className="text-xs uppercase tracking-wide text-neutral-500 underline">
+                  {brand}
+                </Text>
+              </Pressable>
             ) : null}
             <View className="flex-row items-start justify-between gap-4">
               <Text className="flex-1 text-2xl font-semibold text-neutral-900">
@@ -203,6 +232,7 @@ export default function ProductDetailScreen() {
               </Text>
               <WishlistHeart productId={product.id} productName={product.name} />
             </View>
+            <ProductRating summary={reviewSummary} />
             <View className="flex-row flex-wrap items-baseline gap-x-3">
               {off !== null ? (
                 <Text testID="product-discount" className="text-xl font-light text-red-600">
@@ -225,18 +255,10 @@ export default function ProductDetailScreen() {
               <Text
                 testID="stock-status"
                 className={`text-sm font-medium ${
-                  selectedVariant.stock <= 0
-                    ? "text-red-600"
-                    : selectedVariant.stock <= 5
-                      ? "text-amber-600"
-                      : "text-emerald-600"
+                  selectedVariant.stock <= 0 ? "text-red-600" : "text-emerald-600"
                 }`}
               >
-                {selectedVariant.stock <= 0
-                  ? "Out of stock"
-                  : selectedVariant.stock <= 5
-                    ? `Only ${selectedVariant.stock} left in stock`
-                    : "In stock"}
+                {selectedVariant.stock <= 0 ? "Out of stock" : "In stock"}
               </Text>
             ) : null}
           </View>
@@ -343,7 +365,8 @@ export default function ProductDetailScreen() {
               </Text>
               <Pressable
                 onPress={() => setQuantity(Math.min(maxQuantity, effectiveQuantity + 1))}
-                className="px-4 py-2"
+                disabled={effectiveQuantity >= maxQuantity}
+                className="px-4 py-2 disabled:opacity-40"
                 testID="qty-plus"
               >
                 <Text className="text-lg font-semibold text-neutral-700">
@@ -378,6 +401,17 @@ export default function ProductDetailScreen() {
             <Text className="text-center text-sm text-red-600">
               {add.error.message}
             </Text>
+          ) : null}
+
+          <DeliveryDetails />
+
+          <ProductSpecs
+            product={product}
+            categories={categoriesQuery.data ?? []}
+          />
+
+          {sellerQuery.isSuccess ? (
+            <SoldByCard store={sellerQuery.data} siteName={theme.siteName} />
           ) : null}
 
           <ProductRecommendations productId={product.id} />

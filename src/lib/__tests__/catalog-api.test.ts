@@ -23,6 +23,7 @@ function makeProduct(variants: { stock: number }[]): Product {
     seoTitle: null,
     seoDescription: null,
     ogImageUrl: null,
+    specs: {},
     ownerUserId: null,
     approvalStatus: "approved" as const,
     rejectionReason: null,
@@ -62,6 +63,15 @@ describe("buildProductQueryString", () => {
     expect(params.get("sort")).toBe("price_asc");
     expect(params.get("inStock")).toBe("true");
     expect(params.get("page")).toBe("2");
+  });
+});
+
+describe("buildProductQueryString brand and store", () => {
+  it("passes a brand and a store slug through for their pages", () => {
+    const qs = buildProductQueryString({ brand: "Ama Craft", storeSlug: "ama-craft" });
+    const params = new URLSearchParams(qs.replace(/^\?/, ""));
+    expect(params.get("brand")).toBe("Ama Craft");
+    expect(params.get("storeSlug")).toBe("ama-craft");
   });
 });
 

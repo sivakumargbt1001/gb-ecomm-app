@@ -3,6 +3,7 @@ import type {
   Product,
   ProductOptionField,
   ProductSort,
+  StoreProfile,
 } from "@geekbase-labs/shared-types";
 
 import { apiFetch } from "./api-client";
@@ -21,6 +22,9 @@ export type CatalogQuery = {
   categorySlug?: string;
   sort?: ProductSort;
   inStock?: boolean;
+  // Every listing under one brand name, or from one seller's store.
+  brand?: string;
+  storeSlug?: string;
 };
 
 export function buildProductQueryString(query: CatalogQuery): string {
@@ -30,6 +34,8 @@ export function buildProductQueryString(query: CatalogQuery): string {
   params.set("sort", query.sort ?? "relevance");
   if (query.categorySlug) params.set("categorySlug", query.categorySlug);
   if (query.inStock) params.set("inStock", "true");
+  if (query.brand) params.set("brand", query.brand);
+  if (query.storeSlug) params.set("storeSlug", query.storeSlug);
   return `?${params.toString()}`;
 }
 
@@ -74,4 +80,21 @@ export async function fetchProductOptionFields(
     `/api/catalog/products/${encodeURIComponent(slug)}/option-fields`,
   );
   return data.optionFields;
+}
+
+// Who sells a product: their store, or null when the site itself does.
+export async function fetchProductSeller(
+  slug: string,
+): Promise<StoreProfile | null> {
+  const data = await apiFetch<{ store: StoreProfile | null }>(
+    `/api/catalog/products/${encodeURIComponent(slug)}/seller`,
+  );
+  return data.store;
+}
+
+export async function fetchStore(slug: string): Promise<StoreProfile> {
+  const data = await apiFetch<{ store: StoreProfile }>(
+    `/api/catalog/stores/${encodeURIComponent(slug)}`,
+  );
+  return data.store;
 }

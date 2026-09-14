@@ -5,7 +5,14 @@ import { ProductCard } from "./product-card";
 import { fetchRecommendations } from "../../lib/recommendation-api";
 import { recommendationSection } from "../../lib/recommendations";
 
-export function ProductRecommendations({ productId }: { productId: string }) {
+export function ProductRecommendations({
+  productId,
+  title = "Customers also bought",
+}: {
+  productId: string;
+  // The bag calls the same ranking "Items you may have missed".
+  title?: string;
+}) {
   const query = useQuery({
     queryKey: ["recommendations", productId],
     queryFn: () => fetchRecommendations(productId),
@@ -25,7 +32,7 @@ export function ProductRecommendations({ productId }: { productId: string }) {
       className="gap-4 border-t border-neutral-200 pt-6"
     >
       <Text className="text-lg font-semibold text-neutral-900">
-        Customers also bought
+        {title}
       </Text>
       {/* Horizontal on a phone: four cards down the page would push the reviews
           section out of reach. */}

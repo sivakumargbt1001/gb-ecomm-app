@@ -70,6 +70,7 @@ export default function OtpVerifyScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       className="flex-1 bg-white"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
     >
@@ -98,6 +99,8 @@ export default function OtpVerifyScreen() {
             onChangeText={(value) => setCode(value.replace(/[^0-9]/g, "").slice(0, 6))}
             placeholder="000000"
             keyboardType="number-pad"
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
             maxLength={6}
             className="rounded-lg border border-gray-300 px-4 py-3 text-center text-2xl tracking-widest"
           />

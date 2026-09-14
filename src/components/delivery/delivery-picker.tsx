@@ -26,6 +26,9 @@ import { useDeliveryStore } from "../../lib/delivery-store";
 import { useSiteTheme } from "../../lib/site-theme-context";
 import { useAddresses } from "../../lib/use-addresses";
 
+// How long a GPS fix gets before the last known position stands in.
+const LOCATION_FIX_TIMEOUT_MS = 8000;
+
 function estimateLabel(days: number): string {
   if (days === 0) return "Same-day delivery";
   if (days === 1) return "Delivery in 1 day";
@@ -117,9 +120,25 @@ export function DeliveryPicker() {
         setError("Location access was denied. Enter your pincode instead.");
         return;
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // A fresh fix can take a long while indoors, and on some devices never
+      // arrives; the last known position is close enough to name a pincode,
+      // so it stands in once the fix has taken too long.
+      const position = await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+        new Promise<Location.LocationObject | null>((resolve) =>
+          setTimeout(
+            () =>
+              Location.getLastKnownPositionAsync()
+                .then(resolve)
+                .catch(() => resolve(null)),
+            LOCATION_FIX_TIMEOUT_MS,
+          ),
+        ),
+      ]);
+      if (!position) {
+        setError("Could not get your location. Enter your pincode instead.");
+        return;
+      }
       const found = await pincodeFromCoordinates(
         position.coords.latitude,
         position.coords.longitude,

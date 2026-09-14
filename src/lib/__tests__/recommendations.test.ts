@@ -19,6 +19,7 @@ const product = (id: string) => ({
   seoTitle: null,
   seoDescription: null,
   ogImageUrl: null,
+  specs: {},
   ownerUserId: null,
   approvalStatus: "approved" as const,
   rejectionReason: null,

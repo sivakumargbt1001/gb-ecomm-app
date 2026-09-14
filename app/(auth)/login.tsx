@@ -61,6 +61,7 @@ export default function LoginScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       className="flex-1 bg-white"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
     >
@@ -126,6 +127,9 @@ export default function LoginScreen() {
                     placeholder="name@example.com"
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    autoCorrect={false}
                     className="rounded-lg border border-gray-300 px-4 py-3"
                     testID="login-email"
                   />
@@ -157,6 +161,8 @@ export default function LoginScreen() {
                     onBlur={onBlur}
                     placeholder="••••••••"
                     secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
                     autoCapitalize="none"
                     className="rounded-lg border border-gray-300 px-4 py-3"
                     testID="login-password"
@@ -201,6 +207,8 @@ export default function LoginScreen() {
                     onBlur={onBlur}
                     placeholder="+919876543210"
                     keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
                     className="rounded-lg border border-gray-300 px-4 py-3"
                   />
                 )}

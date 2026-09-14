@@ -111,6 +111,7 @@ export default function SignupScreen() {
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
       className="flex-1 bg-white"
       contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
     >
@@ -179,6 +180,9 @@ export default function SignupScreen() {
                     placeholder="name@example.com"
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    autoCorrect={false}
                     className="rounded-lg border border-gray-300 px-4 py-3"
                   />
                 )}
@@ -203,6 +207,8 @@ export default function SignupScreen() {
                     onBlur={onBlur}
                     placeholder="Minimum 8 characters"
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     autoCapitalize="none"
                     className="rounded-lg border border-gray-300 px-4 py-3"
                   />
@@ -254,6 +260,8 @@ export default function SignupScreen() {
                     onBlur={onBlur}
                     placeholder="+919876543210"
                     keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
                     className="rounded-lg border border-gray-300 px-4 py-3"
                   />
                 )}

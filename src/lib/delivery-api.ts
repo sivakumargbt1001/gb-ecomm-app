@@ -43,9 +43,17 @@ export async function pincodeFromCoordinates(
     zoom: "18",
     addressdetails: "1",
   });
+  // Nominatim's usage policy asks every client to identify itself, and it
+  // refuses the generic user agent a native app sends by default — which
+  // read, from the shopper's side, as the location never being found.
   const res = await fetch(
     `https://nominatim.openstreetmap.org/reverse?${params.toString()}`,
-    { headers: { Accept: "application/json" } },
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Pimkart-app/1.0 (delivery pincode lookup)",
+      },
+    },
   );
   if (!res.ok) throw new Error(`Reverse geocoding failed with ${res.status}`);
   const body = (await res.json()) as {
