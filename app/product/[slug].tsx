@@ -115,7 +115,7 @@ export default function ProductDetailScreen() {
   const brand = product.brand;
   const optionFields = optionFieldsQuery.data ?? [];
   const variants = product.variants;
-  const withOptions = hasVariantOptions(variants);
+  const withOptions = hasVariantOptions(variants, product.variantOptions);
 
   const effectiveVariantId =
     selectedVariantId ?? initialVariant(variants)?.id ?? null;
@@ -127,7 +127,8 @@ export default function ProductDetailScreen() {
   const variantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
 
   // The gallery follows the chosen colour, as on the website.
-  const color = withOptions ? (selectedVariant?.color ?? null) : null;
+  const color =
+    withOptions && product.variantOptions.color ? (selectedVariant?.color ?? null) : null;
   const galleryImages =
     color === null ? product.images : imagesForColor(product.images, color);
 
@@ -279,6 +280,7 @@ export default function ProductDetailScreen() {
             <VariantPicker
               variants={variants}
               images={product.images}
+              options={product.variantOptions}
               selected={selectedVariant}
               onSelect={setSelectedVariantId}
             />

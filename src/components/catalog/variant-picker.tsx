@@ -10,26 +10,30 @@ import {
   variantSizes,
   type ProductImage,
   type ProductVariant,
+  type VariantOptions,
 } from "@geekbase-labs/shared-types";
 
 import { formatPaise } from "../../lib/catalog-api";
 
 // Colour cards and size chips over a product's SKUs, using the same shared
 // selection rules as the website: a size is tappable only when that exact
-// colour/size SKU exists and has stock.
+// colour/size SKU exists and has stock. An axis the product has switched
+// off is not drawn, whatever its SKUs say.
 export function VariantPicker({
   variants,
   images,
+  options,
   selected,
   onSelect,
 }: {
   variants: ProductVariant[];
   images: ProductImage[];
+  options: VariantOptions;
   selected: ProductVariant | undefined;
   onSelect: (variantId: string) => void;
 }) {
-  const colors = variantColors(variants);
-  const sizes = variantSizes(variants);
+  const colors = options.color ? variantColors(variants) : [];
+  const sizes = options.size ? variantSizes(variants) : [];
   const color = selected?.color ?? null;
   const size = selected?.size ?? null;
 

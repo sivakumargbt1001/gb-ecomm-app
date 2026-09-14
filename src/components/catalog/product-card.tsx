@@ -1,6 +1,10 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { Link } from "expo-router";
-import type { Product } from "@geekbase-labs/shared-types";
+import {
+  discountPercent,
+  initialVariant,
+  type Product,
+} from "@geekbase-labs/shared-types";
 
 import { WishlistHeart } from "../wishlist/wishlist-heart";
 import { formatPaise, totalStock } from "../../lib/catalog-api";
@@ -17,6 +21,12 @@ export function ProductCard({
 }) {
   const stock = totalStock(product);
   const cover = product.images[0];
+  // The same SKU the product screen opens on, so the card's price and struck
+  // M.R.P. match what the shopper sees after tapping through.
+  const opening = initialVariant(product.variants);
+  const priceInPaise = opening?.priceInPaise ?? product.priceInPaise;
+  const mrpInPaise = opening?.mrpInPaise ?? null;
+  const off = discountPercent(priceInPaise, mrpInPaise);
 
   return (
     <View
@@ -55,9 +65,22 @@ export function ProductCard({
             <Text numberOfLines={2} className="font-medium text-neutral-900">
               {product.name}
             </Text>
-            <Text className="font-semibold text-neutral-900">
-              {formatPaise(product.priceInPaise)}
-            </Text>
+            <View className="flex-row flex-wrap items-baseline gap-x-2">
+              <Text className="font-semibold text-neutral-900">
+                {formatPaise(priceInPaise)}
+              </Text>
+              {off !== null && mrpInPaise !== null ? (
+                <>
+                  <Text
+                    testID="product-card-mrp"
+                    className="text-xs text-neutral-500 line-through"
+                  >
+                    {formatPaise(mrpInPaise)}
+                  </Text>
+                  <Text className="text-xs font-medium text-red-600">-{off}%</Text>
+                </>
+              ) : null}
+            </View>
             {stock !== null && stock <= 0 ? (
               <Text className="text-xs text-red-500">Sold out</Text>
             ) : null}

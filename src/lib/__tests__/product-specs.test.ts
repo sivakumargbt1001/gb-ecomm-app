@@ -14,6 +14,7 @@ function category(overrides: Partial<Category>): Category {
     seoDescription: null,
     imageUrl: null,
     specFields: [],
+    variantOptions: null,
     ownerUserId: null,
     approvalStatus: "approved",
     rejectionReason: null,

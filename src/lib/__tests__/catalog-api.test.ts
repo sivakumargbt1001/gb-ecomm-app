@@ -24,6 +24,7 @@ function makeProduct(variants: { stock: number }[]): Product {
     seoDescription: null,
     ogImageUrl: null,
     specs: {},
+    variantOptions: { color: true, size: true },
     ownerUserId: null,
     approvalStatus: "approved" as const,
     rejectionReason: null,
