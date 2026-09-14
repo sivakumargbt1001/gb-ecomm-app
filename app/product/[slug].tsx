@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   Text,
@@ -10,10 +9,18 @@ import {
 } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import type { ProductOptionField } from "@geekbase-labs/shared-types";
+import {
+  discountPercent,
+  hasVariantOptions,
+  imagesForColor,
+  initialVariant,
+  type ProductOptionField,
+} from "@geekbase-labs/shared-types";
 import * as DocumentPicker from "expo-document-picker";
 
 import { OptionField } from "../../src/components/catalog/option-field";
+import { ProductGallery } from "../../src/components/catalog/product-gallery";
+import { VariantPicker } from "../../src/components/catalog/variant-picker";
 import { ProductRecommendations } from "../../src/components/catalog/product-recommendations";
 import { ProductReviews } from "../../src/components/reviews/product-reviews";
 import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
@@ -82,21 +89,32 @@ export default function ProductDetailScreen() {
   }
 
   const product = productQuery.data;
-  const cover = product.images[0];
   const optionFields = optionFieldsQuery.data ?? [];
   const variants = product.variants;
+  const withOptions = hasVariantOptions(variants);
 
   const effectiveVariantId =
-    selectedVariantId ??
-    (variants.length > 0
-      ? (variants.find((v) => v.stock > 0)?.id ?? variants[0].id)
-      : null);
+    selectedVariantId ?? initialVariant(variants)?.id ?? null;
 
   const selectedVariant = variants.find((v) => v.id === effectiveVariantId);
 
   const isSoldOut =
     variants.length > 0 && variants.every((v) => v.stock <= 0);
   const variantSoldOut = selectedVariant ? selectedVariant.stock <= 0 : false;
+
+  // The gallery follows the chosen colour, as on the website.
+  const color = withOptions ? (selectedVariant?.color ?? null) : null;
+  const galleryImages =
+    color === null ? product.images : imagesForColor(product.images, color);
+
+  const unitPriceInPaise = selectedVariant?.priceInPaise ?? product.priceInPaise;
+  const mrpInPaise = selectedVariant?.mrpInPaise ?? null;
+  const off = discountPercent(unitPriceInPaise, mrpInPaise);
+  // Never more than the chosen SKU has; the cart rejects anything above it.
+  const maxQuantity = selectedVariant
+    ? Math.max(1, Math.min(99, selectedVariant.stock))
+    : 99;
+  const effectiveQuantity = Math.min(quantity, maxQuantity);
 
   function setOptionValue(fieldId: string, value: string | number) {
     setOptionValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -146,7 +164,7 @@ export default function ProductDetailScreen() {
       {
         productId: product.id,
         variantId: effectiveVariantId ?? undefined,
-        quantity,
+        quantity: effectiveQuantity,
         customOptionValues: optionValues,
       },
       {
@@ -155,8 +173,7 @@ export default function ProductDetailScreen() {
           // real additions rather than taps that failed on stock.
           void trackEvent("added_to_cart", {
             productId: product.id,
-            valueInPaise:
-              (selectedVariant?.priceInPaise ?? product.priceInPaise) * quantity,
+            valueInPaise: unitPriceInPaise * effectiveQuantity,
           });
           router.navigate("/(tabs)/cart");
         },
@@ -168,19 +185,7 @@ export default function ProductDetailScreen() {
     <>
       <Stack.Screen options={{ headerShown: true, title: product.name }} />
       <ScrollView className="flex-1 bg-white" testID="product-detail">
-        <View className="aspect-square bg-neutral-100">
-          {cover ? (
-            <Image
-              source={{ uri: cover.url }}
-              className="h-full w-full"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="h-full w-full items-center justify-center">
-              <Text className="text-neutral-400">No image</Text>
-            </View>
-          )}
-        </View>
+        <ProductGallery key={color ?? ""} images={galleryImages} />
 
         <View className="gap-6 p-5">
           <View className="gap-1">
@@ -198,11 +203,42 @@ export default function ProductDetailScreen() {
               </Text>
               <WishlistHeart productId={product.id} productName={product.name} />
             </View>
-            <Text className="text-xl font-semibold text-neutral-900">
-              {formatPaise(
-                selectedVariant?.priceInPaise ?? product.priceInPaise,
-              )}
-            </Text>
+            <View className="flex-row flex-wrap items-baseline gap-x-3">
+              {off !== null ? (
+                <Text testID="product-discount" className="text-xl font-light text-red-600">
+                  -{off}%
+                </Text>
+              ) : null}
+              <Text testID="product-price" className="text-xl font-semibold text-neutral-900">
+                {formatPaise(unitPriceInPaise)}
+              </Text>
+            </View>
+            {off !== null && mrpInPaise !== null ? (
+              <Text className="text-sm text-neutral-500">
+                M.R.P.:{" "}
+                <Text testID="product-mrp" className="line-through">
+                  {formatPaise(mrpInPaise)}
+                </Text>
+              </Text>
+            ) : null}
+            {selectedVariant ? (
+              <Text
+                testID="stock-status"
+                className={`text-sm font-medium ${
+                  selectedVariant.stock <= 0
+                    ? "text-red-600"
+                    : selectedVariant.stock <= 5
+                      ? "text-amber-600"
+                      : "text-emerald-600"
+                }`}
+              >
+                {selectedVariant.stock <= 0
+                  ? "Out of stock"
+                  : selectedVariant.stock <= 5
+                    ? `Only ${selectedVariant.stock} left in stock`
+                    : "In stock"}
+              </Text>
+            ) : null}
           </View>
 
           {product.condition !== "new" ? (
@@ -217,7 +253,16 @@ export default function ProductDetailScreen() {
             <Text className="text-neutral-600">{product.description}</Text>
           ) : null}
 
-          {variants.length > 0 ? (
+          {withOptions ? (
+            <VariantPicker
+              variants={variants}
+              images={product.images}
+              selected={selectedVariant}
+              onSelect={setSelectedVariantId}
+            />
+          ) : null}
+
+          {variants.length > 0 && !withOptions ? (
             <View className="gap-2">
               <Text className="text-sm font-medium text-neutral-800">
                 Options
@@ -282,7 +327,7 @@ export default function ProductDetailScreen() {
             <Text className="text-sm font-medium text-neutral-800">Qty</Text>
             <View className="flex-row items-center rounded-lg border border-neutral-300">
               <Pressable
-                onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+                onPress={() => setQuantity(Math.max(1, effectiveQuantity - 1))}
                 className="px-4 py-2"
                 testID="qty-minus"
               >
@@ -294,10 +339,10 @@ export default function ProductDetailScreen() {
                 className="min-w-[32px] text-center text-base font-medium"
                 testID="qty-value"
               >
-                {quantity}
+                {effectiveQuantity}
               </Text>
               <Pressable
-                onPress={() => setQuantity((q) => Math.min(99, q + 1))}
+                onPress={() => setQuantity(Math.min(maxQuantity, effectiveQuantity + 1))}
                 className="px-4 py-2"
                 testID="qty-plus"
               >
