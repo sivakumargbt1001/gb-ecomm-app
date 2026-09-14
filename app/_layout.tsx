@@ -7,10 +7,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { LaunchSplash } from "../src/components/launch-splash";
 import { apiFetch, refreshSession, setAuthToken } from "../src/lib/api-client";
+import { installAppFont, useAppFonts } from "../src/lib/app-font";
 import { useAuthStore } from "../src/lib/auth-store";
 import { SiteThemeProvider } from "../src/lib/site-theme-context";
 import { loadTokens } from "../src/lib/token-storage";
 import { usePushRegistration } from "../src/lib/use-push-registration";
+
+installAppFont();
 
 function PushRegistrar() {
   usePushRegistration();
@@ -60,6 +63,7 @@ function AuthInitializer() {
 }
 
 export default function RootLayout() {
+  const fontsReady = useAppFonts();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -77,7 +81,10 @@ export default function RootLayout() {
       <SiteThemeProvider>
         <AuthInitializer />
         <PushRegistrar />
-        <Stack screenOptions={{ headerShown: false }} />
+        {/* Screens wait for the typeface so nothing is drawn in the
+            fallback font and then re-laid out; the launch splash covers
+            the wait. */}
+        {fontsReady && <Stack screenOptions={{ headerShown: false }} />}
         <StatusBar style="auto" />
         <LaunchSplash />
       </SiteThemeProvider>
