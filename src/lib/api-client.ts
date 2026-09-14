@@ -54,6 +54,19 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
+// The backend answers a rejected request with `{ error }` written for the
+// shopper ("Invalid email or password"); the screens show it as-is, like the
+// website does, and fall back to the status only when there is no such body.
+async function errorMessage(response: Response): Promise<string> {
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    if (typeof body.error === "string" && body.error) return body.error;
+  } catch {
+    // not JSON
+  }
+  return `API request failed: ${response.status} ${response.statusText}`;
+}
+
 export type ApiRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
@@ -90,7 +103,7 @@ export async function apiFetch<TResponse>(
   }
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw new Error(await errorMessage(response));
   }
 
   if (response.status === 204) {

@@ -56,6 +56,20 @@ describe("apiFetch", () => {
 
     await expect(apiFetch("/health")).rejects.toThrow("API request failed: 500");
   });
+
+  it("surfaces the backend's error message when it sends one", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      json: async () => ({ error: "Invalid email or password" }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(apiFetch("/api/auth/login", { method: "POST" })).rejects.toThrow(
+      "Invalid email or password",
+    );
+  });
 });
 
 jest.mock("expo-secure-store");
