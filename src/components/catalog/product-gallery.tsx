@@ -16,7 +16,8 @@ export function ProductGallery({ images }: { images: ProductImage[] }) {
             testID="gallery-main"
             source={{ uri: current.url }}
             className="h-full w-full"
-            resizeMode="cover"
+            // The whole photo, never cropped, as on the website.
+            resizeMode="contain"
             accessibilityLabel={current.alt ?? undefined}
           />
         ) : (
