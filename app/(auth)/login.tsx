@@ -19,6 +19,7 @@ import { useAuthStore } from "../../src/lib/auth-store";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { saveTokens } from "../../src/lib/token-storage";
 import { mergeGuestCart } from "../../src/lib/cart-api";
+import { PhoneField } from "../../src/components/ui/phone-field";
 
 type Method = "email" | "phone";
 
@@ -201,15 +202,12 @@ export default function LoginScreen() {
               control={phoneForm.control}
               name="phone"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
+                <PhoneField
                   value={value}
-                  onChangeText={onChange}
+                  onChange={onChange}
                   onBlur={onBlur}
-                  placeholder="+919876543210"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  textContentType="telephoneNumber"
-                  className="rounded-lg border border-gray-300 px-4 py-3"
+                  className="rounded-lg border border-gray-300"
+                  testID="phone"
                 />
               )}
             />

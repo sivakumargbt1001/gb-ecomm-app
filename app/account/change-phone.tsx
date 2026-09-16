@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Stack, router } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 import type { OtpChannel } from "@geekbase-labs/shared-types";
+import { formatPhone } from "@geekbase-labs/shared-types";
 
 import {
   SignInRequired,
@@ -12,6 +13,7 @@ import {
 } from "../../src/components/account/sign-in-required";
 import { confirmContactChange, requestContactChange } from "../../src/lib/account-api";
 import { useAuthStore } from "../../src/lib/auth-store";
+import { PhoneField } from "../../src/components/ui/phone-field";
 import {
   canResend,
   createOtpTimerState,
@@ -75,7 +77,7 @@ function ChangePhone() {
         <View className="gap-1">
           <Text className="text-sm text-neutral-500">We&apos;ve sent a one-time password (OTP) to</Text>
           <Text className="text-base text-neutral-900" testID="otp-destination">
-            <Text className="font-semibold">{pending.phone}</Text> on{" "}
+            <Text className="font-semibold">{formatPhone(pending.phone)}</Text> on{" "}
             <Text className="font-semibold">{CHANNEL_LABEL[pending.channel]}</Text>
           </Text>
         </View>
@@ -154,21 +156,12 @@ function ChangePhone() {
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 20, gap: 16 }}>
       {user.phone ? (
         <Text className="text-sm text-neutral-500">
-          Current number: <Text className="font-medium text-neutral-900">{user.phone}</Text>
+          Current number: <Text className="font-medium text-neutral-900">{formatPhone(user.phone)}</Text>
         </Text>
       ) : null}
       <View className="gap-1">
         <Text className="text-sm font-medium text-neutral-800">New mobile number</Text>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+919876543210"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          autoCapitalize="none"
-          className={inputClass}
-          testID="new-phone"
-        />
+        <PhoneField value={phone} onChange={setPhone} testID="new-phone" />
       </View>
       {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
       <Pressable

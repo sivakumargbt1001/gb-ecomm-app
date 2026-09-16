@@ -1,6 +1,7 @@
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Link, Stack } from "expo-router";
 import type { Address } from "@geekbase-labs/shared-types";
+import { formatPhone } from "@geekbase-labs/shared-types";
 
 import {
   SignInRequired,
@@ -64,7 +65,7 @@ function AddressBook() {
               <Text className="text-sm text-neutral-600">
                 {address.city}, {address.state} {address.postalCode}
               </Text>
-              <Text className="text-sm text-neutral-600">{address.phone}</Text>
+              <Text className="text-sm text-neutral-600">{formatPhone(address.phone)}</Text>
             </View>
             <View className="flex-row flex-wrap gap-2">
               <Link href={{ pathname: "/account/address-form", params: { id: address.id } }} asChild>

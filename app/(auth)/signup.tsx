@@ -17,6 +17,7 @@ import { requestOtp, signupWithEmail } from "../../src/lib/auth-api";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { ReferralCodeField } from "../../src/components/auth/referral-code-field";
 import { signupReferralCode } from "../../src/lib/referral";
+import { PhoneField } from "../../src/components/ui/phone-field";
 
 type Method = "email" | "phone";
 
@@ -243,15 +244,12 @@ export default function SignupScreen() {
               control={phoneForm.control}
               name="phone"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
+                <PhoneField
                   value={value}
-                  onChangeText={onChange}
+                  onChange={onChange}
                   onBlur={onBlur}
-                  placeholder="+919876543210"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  textContentType="telephoneNumber"
-                  className="rounded-lg border border-gray-300 px-4 py-3"
+                  className="rounded-lg border border-gray-300"
+                  testID="phone"
                 />
               )}
             />

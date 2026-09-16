@@ -20,6 +20,7 @@ import {
   type CartContactInput,
   type CheckoutResult,
   type CouponPreview,
+  formatPhone,
 } from "@geekbase-labs/shared-types";
 import type { z } from "zod";
 import { useTrackEvent } from "../../src/lib/use-track-event";
@@ -32,6 +33,9 @@ import { checkoutRedeemPoints, redeemedValueInPaise } from "../../src/lib/loyalt
 import { useLoyaltyBalance } from "../../src/lib/use-loyalty";
 import { CouponField } from "../../src/components/checkout/coupon-field";
 import { LoyaltyField } from "../../src/components/checkout/loyalty-field";
+import { PhoneField } from "../../src/components/ui/phone-field";
+import { useAuthStore } from "../../src/lib/auth-store";
+import { useAddresses, useAddressMutations } from "../../src/lib/use-addresses";
 
 type CheckoutAddressForm = z.input<typeof CheckoutAddressSchema>;
 
@@ -46,6 +50,9 @@ export default function CheckoutScreen() {
   const [savedAddress, setSavedAddress] = useState<CheckoutAddressForm | null>(
     null,
   );
+  // The address book entry chosen, when one was; the order then references
+  // it by id and the server reads the address from the book itself.
+  const [savedAddressId, setSavedAddressId] = useState<string | null>(null);
   const [coupon, setCoupon] = useState<CouponPreview | null>(null);
   const [points, setPoints] = useState(0);
   const { balance } = useLoyaltyBalance();
@@ -102,9 +109,11 @@ export default function CheckoutScreen() {
         ) : step === "address" ? (
           <AddressStep
             initial={savedAddress}
+            initialId={savedAddressId}
             onBack={() => setStep("contact")}
-            onNext={(data) => {
+            onNext={(data, id) => {
               setSavedAddress(data);
+              setSavedAddressId(id);
               setStep("review");
             }}
           />
@@ -144,7 +153,9 @@ export default function CheckoutScreen() {
                     })
                   : undefined;
                 const result = await checkout({
-                  shippingAddress: { ...addr, country: addr.country ?? "IN" },
+                  ...(savedAddressId
+                    ? { addressId: savedAddressId }
+                    : { shippingAddress: { ...addr, country: addr.country ?? "IN" } }),
                   contactEmail: savedContact!.contactEmail ?? undefined,
                   contactPhone: savedContact!.contactPhone ?? undefined,
                   whatsappOptIn: savedContact!.whatsappOptIn ?? false,
@@ -242,15 +253,7 @@ function ContactStep({
           control={form.control}
           name="contactPhone"
           render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              value={value ?? ""}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="+919876543210"
-              keyboardType="phone-pad"
-              className="rounded-lg border border-neutral-300 px-4 py-3"
-              testID="contact-phone"
-            />
+            <PhoneField value={value} onChange={onChange} onBlur={onBlur} testID="contact-phone" />
           )}
         />
         {form.formState.errors.contactPhone ? (
@@ -301,13 +304,22 @@ function ContactStep({
 
 function AddressStep({
   initial,
+  initialId,
   onBack,
   onNext,
 }: {
   initial: CheckoutAddressForm | null;
+  initialId: string | null;
   onBack: () => void;
-  onNext: (data: CheckoutAddressForm) => void;
+  onNext: (data: CheckoutAddressForm, savedId: string | null) => void;
 }) {
+  const user = useAuthStore((state) => state.user);
+  const { addresses } = useAddresses();
+  const { create } = useAddressMutations();
+  // Whether the shopper stepped past their saved addresses to type a new one.
+  const [typingNew, setTypingNew] = useState(false);
+  const [saveToBook, setSaveToBook] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(initialId);
   const form = useForm<CheckoutAddressForm>({
     resolver: zodResolver(CheckoutAddressSchema),
     defaultValues: {
@@ -332,7 +344,7 @@ function AddressStep({
     {
       name: "phone",
       label: "Phone",
-      placeholder: "+919876543210",
+      placeholder: "98765 43210",
       keyboard: "phone-pad",
     },
     { name: "line1", label: "Address Line 1", placeholder: "123 Main Street" },
@@ -346,14 +358,114 @@ function AddressStep({
     { name: "postalCode", label: "Postal Code", placeholder: "400001" },
   ];
 
+  // A signed-in shopper's new address goes into their book too, unless they
+  // said not to; a failure there does not hold up the order.
+  const submitNew = form.handleSubmit(async (data) => {
+    let savedId: string | null = null;
+    if (user && saveToBook) {
+      try {
+        savedId = (await create.mutateAsync({ ...data, country: data.country ?? "IN" })).id;
+      } catch {
+        savedId = null;
+      }
+    }
+    onNext(data, savedId);
+  });
+
+  if (addresses.length > 0 && !typingNew) {
+    const chosenId =
+      selectedId ?? addresses.find((a) => a.isDefault)?.id ?? addresses[0]!.id;
+    const chosen = addresses.find((a) => a.id === chosenId) ?? addresses[0]!;
+    return (
+      <ScrollView
+        className="flex-1 bg-white"
+        contentContainerStyle={{ padding: 20, gap: 16 }}
+        testID="saved-address-step"
+      >
+        <Text className="text-xl font-semibold text-neutral-900">Deliver to</Text>
+        {addresses.map((address) => {
+          const active = address.id === chosenId;
+          return (
+            <Pressable
+              key={address.id}
+              testID="saved-address"
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active }}
+              onPress={() => setSelectedId(address.id)}
+              className={`rounded-xl border p-4 ${
+                active ? "border-black" : "border-neutral-200"
+              }`}
+            >
+              <View className="flex-row items-center gap-2">
+                <Text className="font-medium text-neutral-900">{address.fullName}</Text>
+                {address.isDefault ? (
+                  <Text className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700">
+                    Default
+                  </Text>
+                ) : null}
+              </View>
+              <Text className="text-sm text-neutral-600">
+                {address.line1}
+                {address.line2 ? `, ${address.line2}` : ""}, {address.city}, {address.state}{" "}
+                {address.postalCode}
+              </Text>
+              <Text className="text-sm text-neutral-600">{formatPhone(address.phone)}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable testID="add-new-address" onPress={() => setTypingNew(true)} hitSlop={8}>
+          <Text className="text-sm font-medium text-neutral-800 underline">
+            + Deliver to a different address
+          </Text>
+        </Pressable>
+        <View className="flex-row gap-3">
+          <Pressable
+            onPress={onBack}
+            className="flex-1 items-center rounded-lg border border-neutral-300 py-4"
+          >
+            <Text className="text-base font-semibold text-neutral-700">Back</Text>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              onNext(
+                {
+                  fullName: chosen.fullName,
+                  phone: chosen.phone,
+                  line1: chosen.line1,
+                  line2: chosen.line2 ?? "",
+                  city: chosen.city,
+                  state: chosen.state,
+                  postalCode: chosen.postalCode,
+                  country: chosen.country,
+                },
+                chosen.id,
+              )
+            }
+            className="flex-1 items-center rounded-lg bg-black py-4"
+            testID="use-saved-address"
+          >
+            <Text className="text-base font-semibold text-white">Deliver here</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-white"
       contentContainerStyle={{ padding: 20, gap: 16 }}
     >
-      <Text className="text-xl font-semibold text-neutral-900">
-        Shipping Address
-      </Text>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xl font-semibold text-neutral-900">
+          Shipping Address
+        </Text>
+        {addresses.length > 0 ? (
+          <Pressable testID="choose-saved-address" onPress={() => setTypingNew(false)} hitSlop={8}>
+            <Text className="text-sm font-medium text-neutral-800 underline">Saved addresses</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {fields.map(({ name, label, placeholder, keyboard }) => (
         <View key={name} className="gap-1">
@@ -361,18 +473,27 @@ function AddressStep({
           <Controller
             control={form.control}
             name={name}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value ?? ""}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={placeholder}
-                keyboardType={keyboard ?? "default"}
-                autoCapitalize={name === "phone" ? "none" : "words"}
-                className="rounded-lg border border-neutral-300 px-4 py-3"
-                testID={`address-${name}`}
-              />
-            )}
+            render={({ field: { onChange, onBlur, value } }) =>
+              name === "phone" ? (
+                <PhoneField
+                  value={value ?? ""}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  testID={`address-${name}`}
+                />
+              ) : (
+                <TextInput
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder={placeholder}
+                  keyboardType={keyboard ?? "default"}
+                  autoCapitalize="words"
+                  className="rounded-lg border border-neutral-300 px-4 py-3"
+                  testID={`address-${name}`}
+                />
+              )
+            }
           />
           {form.formState.errors[name] ? (
             <Text className="text-xs text-red-600">
@@ -382,6 +503,13 @@ function AddressStep({
         </View>
       ))}
 
+      {user ? (
+        <View className="flex-row items-center justify-between">
+          <Text className="text-sm text-neutral-800">Save this address to my account</Text>
+          <Switch value={saveToBook} onValueChange={setSaveToBook} testID="save-address" />
+        </View>
+      ) : null}
+
       <View className="flex-row gap-3">
         <Pressable
           onPress={onBack}
@@ -390,12 +518,13 @@ function AddressStep({
           <Text className="text-base font-semibold text-neutral-700">Back</Text>
         </Pressable>
         <Pressable
-          onPress={form.handleSubmit(onNext)}
+          onPress={submitNew}
+          disabled={create.isPending}
           className="flex-1 items-center rounded-lg bg-black py-4"
           testID="address-next"
         >
           <Text className="text-base font-semibold text-white">
-            Review Order
+            {create.isPending ? "Saving..." : "Review Order"}
           </Text>
         </Pressable>
       </View>
@@ -472,7 +601,7 @@ function ReviewStep({
         <Text className="text-sm text-neutral-600">
           {address.city}, {address.state} {address.postalCode}
         </Text>
-        <Text className="text-sm text-neutral-600">{address.phone}</Text>
+        <Text className="text-sm text-neutral-600">{formatPhone(address.phone)}</Text>
       </View>
 
       <View className="gap-2 rounded-lg border border-neutral-200 p-4">

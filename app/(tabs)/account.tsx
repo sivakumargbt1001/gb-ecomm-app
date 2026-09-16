@@ -8,6 +8,7 @@ import { setAuthToken } from "../../src/lib/api-client";
 import { clearTokens, loadTokens } from "../../src/lib/token-storage";
 import { detachPushDevice } from "../../src/lib/push-registration";
 import { ReferralCard } from "../../src/components/account/referral-card";
+import { formatPhone } from "@geekbase-labs/shared-types";
 
 const SECTIONS: { label: string; hint: string; href: Href; testID: string }[] = [
   {
@@ -77,7 +78,7 @@ export default function AccountScreen() {
     );
   }
 
-  const greeting = user.name ? `Hi, ${user.name}` : (user.email ?? user.phone ?? "");
+  const greeting = user.name ? `Hi, ${user.name}` : (user.email ?? formatPhone(user.phone) ?? "");
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 20, gap: 16 }}>
@@ -86,7 +87,7 @@ export default function AccountScreen() {
           {greeting}
         </Text>
         {user.name ? (
-          <Text className="text-sm text-neutral-500">{user.email ?? user.phone}</Text>
+          <Text className="text-sm text-neutral-500">{user.email ?? formatPhone(user.phone)}</Text>
         ) : null}
       </View>
 

@@ -11,6 +11,7 @@ import {
   primaryButtonClass,
 } from "../../src/components/account/sign-in-required";
 import { useAddresses, useAddressMutations } from "../../src/lib/use-addresses";
+import { PhoneField } from "../../src/components/ui/phone-field";
 
 type AddressFormValues = z.input<typeof CreateAddressSchema>;
 
@@ -21,7 +22,7 @@ const FIELDS: {
   keyboard?: "phone-pad" | "number-pad";
 }[] = [
   { name: "fullName", label: "Full name", placeholder: "Asha Rao" },
-  { name: "phone", label: "Phone", placeholder: "+919876543210", keyboard: "phone-pad" },
+  { name: "phone", label: "Phone", placeholder: "98765 43210", keyboard: "phone-pad" },
   { name: "line1", label: "Address line 1", placeholder: "1 MG Road" },
   { name: "line2", label: "Address line 2 (optional)", placeholder: "Flat 4B" },
   { name: "city", label: "City", placeholder: "Bengaluru" },
@@ -107,18 +108,27 @@ function AddressFields({
           <Controller
             control={form.control}
             name={name}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                value={value ?? ""}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                placeholder={placeholder}
-                keyboardType={keyboard ?? "default"}
-                autoCapitalize={name === "phone" ? "none" : "words"}
-                className={inputClass}
-                testID={`address-${name}`}
-              />
-            )}
+            render={({ field: { onChange, onBlur, value } }) =>
+              name === "phone" ? (
+                <PhoneField
+                  value={value ?? ""}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  testID={`address-${name}`}
+                />
+              ) : (
+                <TextInput
+                  value={value ?? ""}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder={placeholder}
+                  keyboardType={keyboard ?? "default"}
+                  autoCapitalize="words"
+                  className={inputClass}
+                  testID={`address-${name}`}
+                />
+              )
+            }
           />
           {form.formState.errors[name] ? (
             <Text className="text-xs text-red-600">{form.formState.errors[name]?.message}</Text>

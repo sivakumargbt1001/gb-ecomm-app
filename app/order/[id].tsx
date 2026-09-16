@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import type { OrderLineItem } from "@geekbase-labs/shared-types";
+import { formatPhone } from "@geekbase-labs/shared-types";
 
 import { OrderItemReview } from "../../src/components/orders/order-item-review";
 import { formatPaise } from "../../src/lib/catalog-api";
@@ -205,7 +206,7 @@ export default function OrderDetailScreen() {
           {address.city}, {address.state} {address.postalCode}
         </Text>
         <Text className="text-sm text-neutral-600">{address.country}</Text>
-        <Text className="text-sm text-neutral-600">{address.phone}</Text>
+        <Text className="text-sm text-neutral-600">{formatPhone(address.phone)}</Text>
       </View>
 
       <View className="px-4 pb-10 pt-2">
