@@ -4,11 +4,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Category, ProductSort } from "@geekbase-labs/shared-types";
+import {
+  compareSizes,
+  filterableSpecFields,
+  type Category,
+  type ProductSort,
+} from "@geekbase-labs/shared-types";
 
 import { fetchCategories } from "../../lib/catalog-api";
-import { useCatalogFilterStore } from "../../lib/catalog-filter-store";
+import {
+  countNarrowing,
+  isValueSelected,
+  useCatalogFilterStore,
+} from "../../lib/catalog-filter-store";
 import { useSiteTheme } from "../../lib/site-theme-context";
+import { useCatalogProducts } from "../../lib/use-catalog-products";
 
 export const SORTS: { value: ProductSort; label: string }[] = [
   { value: "relevance", label: "Relevance" },
@@ -25,12 +35,35 @@ export function CatalogMenu() {
   const theme = useSiteTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { categorySlug, sort, isMenuOpen, setCategorySlug, setSort, closeMenu } =
-    useCatalogFilterStore();
+  const filters = useCatalogFilterStore();
+  const {
+    categorySlug,
+    sort,
+    sizes,
+    colors,
+    specs,
+    isMenuOpen,
+    setCategorySlug,
+    setSort,
+    toggleSize,
+    toggleColor,
+    toggleSpec,
+    clearNarrowing,
+    closeMenu,
+  } = filters;
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
   });
+  // The grid's own query, for what can still be narrowed by. A value the
+  // shopper already ticked stays listed even if a later pick would drop it.
+  const facets = useCatalogProducts().data?.facets ?? { sizes: [], colors: [] };
+  const sizeOptions = withSelected(facets.sizes, sizes).sort(compareSizes);
+  const colorOptions = withSelected(facets.colors, colors).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" }),
+  );
+  const specFields = filterableSpecFields(categoriesQuery.data ?? [], categorySlug);
+  const narrowed = countNarrowing(filters);
   // The whole tree, grouped by parent: the website's nav opens a panel of a
   // category's children, and here those unfold beneath the category instead.
   const childrenOf = new Map<string | null, Category[]>();
@@ -102,6 +135,59 @@ export function CatalogMenu() {
               />
             ))}
 
+            {(sizeOptions.length > 0 || colorOptions.length > 0 || specFields.length > 0) && (
+              <View className="flex-row items-center justify-between pr-4">
+                <SectionTitle>Filters</SectionTitle>
+                {narrowed > 0 ? (
+                  <Pressable testID="clear-narrowing" onPress={clearNarrowing} hitSlop={8}>
+                    <Text className="text-xs text-neutral-500 underline">Clear</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+            {sizeOptions.length > 0 && (
+              <FilterSection title="Size" count={sizes.length}>
+                {sizeOptions.map((size) => (
+                  <TickItem
+                    key={size}
+                    label={size}
+                    checked={isValueSelected(sizes, size)}
+                    accent={theme.colors.accent}
+                    onPress={() => toggleSize(size)}
+                  />
+                ))}
+              </FilterSection>
+            )}
+            {colorOptions.length > 0 && (
+              <FilterSection title="Colour" count={colors.length}>
+                {colorOptions.map((color) => (
+                  <TickItem
+                    key={color}
+                    label={color}
+                    checked={isValueSelected(colors, color)}
+                    accent={theme.colors.accent}
+                    onPress={() => toggleColor(color)}
+                  />
+                ))}
+              </FilterSection>
+            )}
+            {specFields.map((field) => {
+              const selected = specs[field.key] ?? [];
+              return (
+                <FilterSection key={field.key} title={field.label} count={selected.length}>
+                  {withSelected(field.choices, selected).map((choice) => (
+                    <TickItem
+                      key={choice}
+                      label={choice}
+                      checked={isValueSelected(selected, choice)}
+                      accent={theme.colors.accent}
+                      onPress={() => toggleSpec(field.key, choice)}
+                    />
+                  ))}
+                </FilterSection>
+              );
+            })}
+
             <SectionTitle>Sort by</SectionTitle>
             {SORTS.map((option) => (
               <MenuItem
@@ -124,6 +210,81 @@ export function CatalogMenu() {
         />
       </View>
     </Modal>
+  );
+}
+
+function withSelected(options: string[], selected: string[]): string[] {
+  const lower = new Set(options.map((o) => o.toLowerCase()));
+  return [...options, ...selected.filter((s) => !lower.has(s.toLowerCase()))];
+}
+
+// A folding group of tick rows, closed unless something in it is ticked —
+// the website's sidebar sections, with the same +/− and count.
+function FilterSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(count > 0);
+  return (
+    <View testID={`filter-section-${title}`}>
+      <Pressable
+        onPress={() => setOpen((value) => !value)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${title}${count > 0 ? `, ${count} selected` : ""}`}
+        className="flex-row items-center justify-between px-4 py-3 active:bg-neutral-50"
+      >
+        <View className="flex-row items-center gap-2">
+          <Text className="text-[15px] font-medium text-neutral-900">{title}</Text>
+          {count > 0 ? (
+            <View className="rounded-full bg-neutral-900 px-1.5">
+              <Text testID="filter-section-count" className="text-[11px] font-medium text-white">
+                {count}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <Text className="text-lg leading-none text-neutral-500">{open ? "−" : "+"}</Text>
+      </Pressable>
+      {open ? <View className="pb-1">{children}</View> : null}
+    </View>
+  );
+}
+
+// One tickable value. Ticking never closes the menu: a shopper narrowing by
+// size usually wants a colour too.
+function TickItem({
+  label,
+  checked,
+  accent,
+  onPress,
+}: {
+  label: string;
+  checked: boolean;
+  accent: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      className="flex-row items-center gap-3 py-2 pl-6 pr-4 active:bg-neutral-50"
+    >
+      <Ionicons
+        name={checked ? "checkbox" : "square-outline"}
+        size={20}
+        color={checked ? accent : "#a3a3a3"}
+      />
+      <Text className={`text-[15px] ${checked ? "font-semibold text-neutral-900" : "text-neutral-800"}`}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 

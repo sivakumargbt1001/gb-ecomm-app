@@ -3,6 +3,7 @@ import type {
   Review,
   ReviewEligibility,
   ReviewList,
+  UpdateReviewInput,
 } from "@geekbase-labs/shared-types";
 
 import { apiFetch } from "./api-client";
@@ -31,5 +32,16 @@ export async function createReview(input: CreateReviewInput): Promise<Review> {
     method: "POST",
     body: input,
   });
+  return data.review;
+}
+
+export async function updateReview(
+  reviewId: string,
+  input: UpdateReviewInput,
+): Promise<Review> {
+  const data = await apiFetch<{ review: Review }>(
+    `/api/reviews/${encodeURIComponent(reviewId)}`,
+    { method: "PATCH", body: input },
+  );
   return data.review;
 }

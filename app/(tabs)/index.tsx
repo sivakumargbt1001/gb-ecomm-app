@@ -11,23 +11,23 @@ import { ProductCard } from "../../src/components/catalog/product-card";
 import { DeliveryPicker } from "../../src/components/delivery/delivery-picker";
 import { SORTS } from "../../src/components/storefront/catalog-menu";
 import { PromoBannerRail } from "../../src/components/storefront/promo-banner-rail";
-import { fetchCategories, fetchProducts } from "../../src/lib/catalog-api";
-import { useCatalogFilterStore } from "../../src/lib/catalog-filter-store";
+import { fetchCategories } from "../../src/lib/catalog-api";
+import { countNarrowing, useCatalogFilterStore } from "../../src/lib/catalog-filter-store";
+import { useCatalogProducts } from "../../src/lib/use-catalog-products";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 
 export default function CatalogScreen() {
   const theme = useSiteTheme();
-  const { categorySlug, sort, openMenu } = useCatalogFilterStore();
+  const filters = useCatalogFilterStore();
+  const { categorySlug, sort, openMenu } = filters;
+  const narrowed = countNarrowing(filters);
 
   const categoriesQuery = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
   });
 
-  const productsQuery = useQuery({
-    queryKey: ["products", categorySlug, sort],
-    queryFn: () => fetchProducts({ categorySlug, sort }),
-  });
+  const productsQuery = useCatalogProducts();
 
   // The selected category's intro, the same words the website shows above
   // its grid, so a shopper on either sees the same page.
@@ -59,6 +59,11 @@ export default function CatalogScreen() {
       >
         <Text className="text-sm font-medium text-neutral-900" numberOfLines={1}>
           {selectedCategory?.name ?? "All products"}
+          {narrowed > 0 ? (
+            <Text testID="catalog-narrowing-count" className="text-neutral-500">
+              {" "}· {narrowed} filter{narrowed === 1 ? "" : "s"}
+            </Text>
+          ) : null}
         </Text>
         <Text className="text-xs text-neutral-500">
           {SORTS.find((option) => option.value === sort)?.label}

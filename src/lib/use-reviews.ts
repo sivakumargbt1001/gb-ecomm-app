@@ -4,6 +4,7 @@ import type {
   Review,
   ReviewEligibility,
   ReviewSummary,
+  UpdateReviewInput,
 } from "@geekbase-labs/shared-types";
 import {
   useMutation,
@@ -12,7 +13,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import { createReview, getReviewEligibility, listReviews } from "./review-api";
+import {
+  createReview,
+  getReviewEligibility,
+  listReviews,
+  updateReview,
+} from "./review-api";
 
 export const REVIEWS_KEY = ["reviews"] as const;
 export const REVIEWS_PAGE_SIZE = 5;
@@ -79,6 +85,23 @@ export function useCreateReview(productId: string) {
       );
       // The average is the server's to compute — recomputing it here would let
       // the app disagree with the website about the same product.
+      void queryClient.invalidateQueries({ queryKey: REVIEWS_KEY });
+    },
+  });
+}
+
+// Same follow-up as creating: the shopper's own copy is replaced in place and
+// the public list — with its average and breakdown — is refetched.
+export function useUpdateReview(productId: string, reviewId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateReviewInput) => updateReview(reviewId, input),
+    onSuccess: (review) => {
+      queryClient.setQueryData<ReviewEligibility>(
+        reviewEligibilityKey(productId),
+        { canReview: false, review },
+      );
       void queryClient.invalidateQueries({ queryKey: REVIEWS_KEY });
     },
   });

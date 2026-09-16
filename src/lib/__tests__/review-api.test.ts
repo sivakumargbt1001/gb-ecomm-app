@@ -3,6 +3,7 @@ import {
   createReview,
   getReviewEligibility,
   listReviews,
+  updateReview,
 } from "../review-api";
 
 jest.mock("../api-client");
@@ -16,7 +17,9 @@ const MOCK_REVIEW = {
   productId: PRODUCT_ID,
   rating: 4,
   text: "Solid.",
+  reviewerName: "Asha",
   createdAt: "2026-08-02T10:00:00.000Z",
+  updatedAt: "2026-08-02T10:00:00.000Z",
 };
 
 const MOCK_PAGE = {
@@ -25,7 +28,11 @@ const MOCK_PAGE = {
   pageSize: 5,
   total: 1,
   totalPages: 1,
-  summary: { averageRating: 4, count: 1 },
+  summary: {
+    averageRating: 4,
+    count: 1,
+    breakdown: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0 },
+  },
 };
 
 describe("review-api", () => {
@@ -77,6 +84,19 @@ describe("review-api", () => {
     expect(mockApiFetch).toHaveBeenCalledWith(
       `/api/reviews/${encodeURIComponent("weird id/../x")}/me`,
     );
+  });
+
+  it("updateReview PATCHes the review by id and unwraps it", async () => {
+    const edited = { ...MOCK_REVIEW, rating: 2, text: "Faded." };
+    mockApiFetch.mockResolvedValue({ review: edited });
+
+    const review = await updateReview(MOCK_REVIEW.id, { rating: 2, text: "Faded." });
+
+    expect(mockApiFetch).toHaveBeenCalledWith(`/api/reviews/${MOCK_REVIEW.id}`, {
+      method: "PATCH",
+      body: { rating: 2, text: "Faded." },
+    });
+    expect(review).toEqual(edited);
   });
 
   it("propagates API failures instead of swallowing them", async () => {

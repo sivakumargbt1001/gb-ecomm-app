@@ -1,7 +1,14 @@
+import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Link } from "expo-router";
-import type { Review } from "@geekbase-labs/shared-types";
+import {
+  isReviewEdited,
+  reviewAge,
+  reviewerDisplayName,
+  type Review,
+} from "@geekbase-labs/shared-types";
 
+import { RatingBreakdown } from "./rating-breakdown";
 import { RatingStars } from "./rating-stars";
 import { ReviewForm } from "./review-form";
 import { useAuthStore } from "../../lib/auth-store";
@@ -16,31 +23,83 @@ function formatReviewDate(isoDate: string): string {
   });
 }
 
+// Everyone else sees how fresh a review is, not the day it was written or
+// whether it was touched since; the exact dates are the author's own view.
 function ReviewRow({
   review,
   testID,
   label,
+  onEdit,
+  mine = false,
 }: {
   review: Review;
   testID: string;
   label?: string;
+  onEdit?: () => void;
+  mine?: boolean;
 }) {
   return (
     <View testID={testID} className="gap-1 border-t border-neutral-100 py-3">
-      <View className="flex-row items-center gap-2">
+      <View className="flex-row flex-wrap items-center gap-2">
         <RatingStars rating={review.rating} />
-        <Text className="text-sm text-neutral-500">
-          {review.rating} out of 5 · {formatReviewDate(review.createdAt)}
-        </Text>
+        <Text className="text-sm text-neutral-500">{review.rating} out of 5</Text>
         {label ? (
           <Text className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700">
             {label}
           </Text>
         ) : null}
+        {onEdit ? (
+          <Pressable testID="edit-review" onPress={onEdit} hitSlop={8} className="ml-auto">
+            <Text className="text-sm font-medium text-neutral-800 underline">Edit</Text>
+          </Pressable>
+        ) : null}
       </View>
+      <Text className="text-sm text-neutral-500">
+        <Text testID="review-author" className="font-medium text-neutral-800">
+          {reviewerDisplayName(review)}
+        </Text>
+        {" · "}
+        {mine ? (
+          <>
+            {formatReviewDate(review.createdAt)}
+            {isReviewEdited(review) ? (
+              <Text testID="review-edited"> · Edited {formatReviewDate(review.updatedAt)}</Text>
+            ) : null}
+          </>
+        ) : (
+          reviewAge(review.createdAt)
+        )}
+      </Text>
       {review.text ? (
         <Text className="text-neutral-700">{review.text}</Text>
       ) : null}
+    </View>
+  );
+}
+
+// The shopper's own review, with the way back into the form to change it.
+function OwnReview({ productId, review }: { productId: string; review: Review }) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <ReviewForm
+        productId={productId}
+        existing={review}
+        onDone={() => setEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <View className="rounded-xl border border-neutral-200 px-4">
+      <ReviewRow
+        review={review}
+        testID="review-mine"
+        label="Your review"
+        mine
+        onEdit={() => setEditing(true)}
+      />
     </View>
   );
 }
@@ -73,13 +132,7 @@ function Invitation({ productId }: { productId: string }) {
         </Text>
       );
     case "own-review":
-      return (
-        <ReviewRow
-          review={eligibility!.review!}
-          testID="review-mine"
-          label="Your review"
-        />
-      );
+      return <OwnReview productId={productId} review={eligibility!.review!} />;
     case "form":
       return <ReviewForm productId={productId} />;
   }
@@ -105,6 +158,13 @@ export function ProductReviews({ productId }: { productId: string }) {
           </View>
         ) : null}
       </View>
+
+      {summary && summary.count > 0 ? (
+        <View className="gap-2 rounded-xl border border-neutral-200 p-4">
+          <Text className="text-sm font-medium text-neutral-900">Rating snapshot</Text>
+          <RatingBreakdown summary={summary} />
+        </View>
+      ) : null}
 
       <Invitation productId={productId} />
 

@@ -6,6 +6,8 @@ import {
   type Product,
 } from "@geekbase-labs/shared-types";
 
+import { ColorSwatches } from "./color-swatches";
+import { ProductCardRating } from "../reviews/product-rating";
 import { WishlistHeart } from "../wishlist/wishlist-heart";
 import { formatPaise, totalStock } from "../../lib/catalog-api";
 
@@ -65,6 +67,8 @@ export function ProductCard({
             <Text numberOfLines={2} className="font-medium text-neutral-900">
               {product.name}
             </Text>
+            <ProductCardRating rating={product.rating} />
+            <ColorSwatches product={product} />
             <View className="flex-row flex-wrap items-baseline gap-x-2">
               <Text className="font-semibold text-neutral-900">
                 {formatPaise(priceInPaise)}

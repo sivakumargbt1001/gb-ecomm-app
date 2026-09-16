@@ -1,9 +1,12 @@
-import type {
-  Category,
-  Product,
-  ProductOptionField,
-  ProductSort,
-  StoreProfile,
+import {
+  serializeSpecFilters,
+  type Category,
+  type Product,
+  type ProductFacets,
+  type ProductOptionField,
+  type ProductSort,
+  type SpecFilters,
+  type StoreProfile,
 } from "@geekbase-labs/shared-types";
 
 import { apiFetch } from "./api-client";
@@ -14,6 +17,7 @@ export type ProductListResponse = {
   pageSize: number;
   total: number;
   totalPages: number;
+  facets: ProductFacets;
 };
 
 export type CatalogQuery = {
@@ -25,6 +29,10 @@ export type CatalogQuery = {
   // Every listing under one brand name, or from one seller's store.
   brand?: string;
   storeSlug?: string;
+  // Any-of within each; a spec key's values are any-of, keys are all-of.
+  sizes?: string[];
+  colors?: string[];
+  specs?: SpecFilters;
 };
 
 export function buildProductQueryString(query: CatalogQuery): string {
@@ -36,6 +44,11 @@ export function buildProductQueryString(query: CatalogQuery): string {
   if (query.inStock) params.set("inStock", "true");
   if (query.brand) params.set("brand", query.brand);
   if (query.storeSlug) params.set("storeSlug", query.storeSlug);
+  if (query.sizes && query.sizes.length > 0) params.set("sizes", query.sizes.join(","));
+  if (query.colors && query.colors.length > 0) params.set("colors", query.colors.join(","));
+  if (query.specs && Object.keys(query.specs).length > 0) {
+    params.set("specs", serializeSpecFilters(query.specs));
+  }
   return `?${params.toString()}`;
 }
 

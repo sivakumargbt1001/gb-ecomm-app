@@ -15,7 +15,9 @@ const review: Review = {
   productId: PRODUCT_ID,
   rating: 4,
   text: "Solid.",
+  reviewerName: "Asha",
   createdAt: "2026-08-02T10:00:00.000Z",
+  updatedAt: "2026-08-02T10:00:00.000Z",
 };
 
 describe("reviewInvitation", () => {

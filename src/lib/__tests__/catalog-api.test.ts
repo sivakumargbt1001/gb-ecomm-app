@@ -31,6 +31,7 @@ function makeProduct(variants: { stock: number }[]): Product {
     submittedAt: null,
     reviewedAt: null,
     createdAt: "2026-07-02T00:00:00.000Z",
+    rating: { averageRating: null, count: 0 },
     variants: variants.map((v, i) => ({
       id: `44444444-4444-4444-8444-00000000000${i}`,
       productId: "33333333-3333-4333-8333-333333333333",

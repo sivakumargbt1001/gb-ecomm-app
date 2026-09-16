@@ -13,7 +13,7 @@ import {
   discountPercent,
   hasVariantOptions,
   imagesForColor,
-  initialVariant,
+  openingVariant,
   type ProductOptionField,
 } from "@geekbase-labs/shared-types";
 import * as DocumentPicker from "expo-document-picker";
@@ -25,6 +25,7 @@ import { ProductRecommendations } from "../../src/components/catalog/product-rec
 import { ProductSpecs } from "../../src/components/catalog/product-specs";
 import { SoldByCard } from "../../src/components/catalog/sold-by-card";
 import { DeliveryDetails } from "../../src/components/delivery/delivery-details";
+import { Breadcrumbs } from "../../src/components/catalog/breadcrumbs";
 import { ProductRating } from "../../src/components/reviews/product-rating";
 import { ProductReviews } from "../../src/components/reviews/product-reviews";
 import { WishlistHeart } from "../../src/components/wishlist/wishlist-heart";
@@ -43,7 +44,8 @@ import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { uploadOptionFile } from "../../src/lib/cart-api";
 
 export default function ProductDetailScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  // `color` comes from a card's colour swatch, so the screen opens on it.
+  const { slug, color: askedColor } = useLocalSearchParams<{ slug: string; color?: string }>();
 
   const productQuery = useQuery({
     queryKey: ["product", slug],
@@ -118,7 +120,7 @@ export default function ProductDetailScreen() {
   const withOptions = hasVariantOptions(variants, product.variantOptions);
 
   const effectiveVariantId =
-    selectedVariantId ?? initialVariant(variants)?.id ?? null;
+    selectedVariantId ?? openingVariant(variants, askedColor)?.id ?? null;
 
   const selectedVariant = variants.find((v) => v.id === effectiveVariantId);
 
@@ -210,6 +212,11 @@ export default function ProductDetailScreen() {
     <>
       <Stack.Screen options={{ headerShown: true, title: product.name }} />
       <ScrollView className="flex-1 bg-white" testID="product-detail">
+        <Breadcrumbs
+          categoryId={product.categoryId}
+          categories={categoriesQuery.data ?? []}
+          current={product.name}
+        />
         <ProductGallery key={color ?? ""} images={galleryImages} />
 
         <View className="gap-6 p-5">

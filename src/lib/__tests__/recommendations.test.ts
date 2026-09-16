@@ -27,6 +27,7 @@ const product = (id: string) => ({
   submittedAt: null,
   reviewedAt: null,
   createdAt: "2026-08-01T00:00:00.000Z",
+  rating: { averageRating: null, count: 0 },
   variants: [],
   images: [],
 });
