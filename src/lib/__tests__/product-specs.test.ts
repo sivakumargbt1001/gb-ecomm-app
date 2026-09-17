@@ -7,6 +7,7 @@ function category(overrides: Partial<Category>): Category {
     id: "11111111-1111-4111-8111-111111111111",
     name: "Bags",
     slug: "bags",
+    code: "cat0000001",
     parentId: null,
     sortOrder: 0,
     description: null,
@@ -35,6 +36,7 @@ const kidsBags = category({
   id: "22222222-2222-4222-8222-222222222222",
   name: "Kids bags",
   slug: "kids-bags",
+  code: "cat0000002",
   parentId: bags.id,
   specFields: [
     { key: "material", label: "Material", inputType: "text", choices: [], required: false, highlight: true },

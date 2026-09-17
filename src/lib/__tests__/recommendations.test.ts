@@ -8,6 +8,7 @@ const product = (id: string) => ({
   categoryId: "22222222-2222-4222-8222-222222222222",
   name: `Product ${id}`,
   slug: `product-${id}`,
+  code: `${id}`.padStart(8, "0").slice(-8),
   description: "",
   priceInPaise: 100000,
   currency: "INR" as const,
