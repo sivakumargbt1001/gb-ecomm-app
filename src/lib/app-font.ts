@@ -55,6 +55,10 @@ export function familyFor(weight: TextStyle["fontWeight"]): string {
 // leaving it on would make Android embolden an already-bold file.
 export function withAppFont(style: TextStyle | TextStyle[] | undefined): TextStyle[] {
   const flat = StyleSheet.flatten(style) as TextStyle | undefined;
+  // A caller that names its own family keeps it. Icon fonts reach here as a
+  // plain <Text> whose glyphs live in the private use area, so swapping in
+  // Jakarta would leave nothing to draw but .notdef boxes.
+  if (flat?.fontFamily) return [flat];
   return [flat ?? {}, { fontFamily: familyFor(flat?.fontWeight), fontWeight: "normal" }];
 }
 

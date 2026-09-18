@@ -10,11 +10,14 @@ import {
   type ViewToken,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import type { PromoBanner } from "@geekbase-labs/shared-types";
 
 import { SITE_SETTINGS_QUERY_KEY } from "../../lib/site-theme-context";
 import { fetchSiteSettings } from "../../lib/site-settings-api";
+import { useCatalogFilterStore } from "../../lib/catalog-filter-store";
+import { siteLinkTarget } from "../../lib/site-links";
 
 const GAP = 12;
 const SIDE = 16;
@@ -111,8 +114,24 @@ function BannerCard({
 }) {
   // Same tall 5:8 tile as the website rail.
   const height = Math.round((width * 8) / 5);
+  const router = useRouter();
+  const setCategorySlug = useCatalogFilterStore((state) => state.setCategorySlug);
+  // The banner addresses the website. A destination this app has of its own is
+  // opened here; anything else — a campaign page, a policy page — is still the
+  // browser's to show.
   const open = () => {
-    if (banner.linkUrl) void Linking.openURL(banner.linkUrl);
+    if (!banner.linkUrl) return;
+    const target = siteLinkTarget(banner.linkUrl);
+    if (!target) {
+      void Linking.openURL(banner.linkUrl);
+      return;
+    }
+    if (target.kind === "category") {
+      setCategorySlug(target.slug);
+      router.navigate("/(tabs)");
+      return;
+    }
+    router.push(target.href as Parameters<typeof router.push>[0]);
   };
   // The admin picked whichever colour reads on the artwork; the scrim behind
   // the words follows it.
@@ -168,7 +187,14 @@ function BannerVideo({ url, active }: { url: string; active: boolean }) {
   const [ended, setEnded] = useState(false);
 
   useEffect(() => {
-    const subscription = player.addListener("playToEnd", () => setEnded(true));
+    const subscription = player.addListener("playToEnd", () => {
+      setEnded(true);
+      // Paused past the end, the player has no frame to show and clears its
+      // surface, leaving the card's own background as a blank tile. Stepping
+      // back inside the clip leaves a decoded frame on screen to rest on.
+      const end = player.duration;
+      if (end > 0) player.currentTime = Math.max(0, end - 0.1);
+    });
     return () => subscription.remove();
   }, [player]);
 
@@ -191,6 +217,13 @@ function BannerVideo({ url, active }: { url: string; active: boolean }) {
         player={player}
         nativeControls={false}
         contentFit="cover"
+        // A surfaceView is its own window punched through this one, so it
+        // blanks to black when the player stops and composites badly under
+        // the scrim and control drawn over it. A textureView sits in the
+        // view tree and keeps its last frame, which is what resting on the
+        // final frame needs. Expo recommends it for exactly this case:
+        // an overlapped video with contentFit="cover".
+        surfaceType="textureView"
         style={{ width: "100%", height: "100%" }}
       />
       <View className="absolute bottom-3 left-3">
