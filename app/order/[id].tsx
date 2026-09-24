@@ -11,6 +11,7 @@ import type { OrderLineItem } from "@geekbase-labs/shared-types";
 import { formatPhone } from "@geekbase-labs/shared-types";
 
 import { OrderItemReview } from "../../src/components/orders/order-item-review";
+import { ShipmentTimelines } from "../../src/components/orders/shipment-timelines";
 import { formatPaise } from "../../src/lib/catalog-api";
 import { useAuthStore } from "../../src/lib/auth-store";
 import {
@@ -19,7 +20,7 @@ import {
   orderTimeline,
   type TimelineStep,
 } from "../../src/lib/order-status";
-import { useBuyAgain, useOrder } from "../../src/lib/use-orders";
+import { useBuyAgain, useOrder, useOrderShipments } from "../../src/lib/use-orders";
 
 function TimelineRow({ step }: { step: TimelineStep }) {
   const cancelled = step.status === "cancelled";
@@ -79,6 +80,7 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((state) => state.user);
   const { order, isLoading, error } = useOrder(id, Boolean(user) && Boolean(id));
+  const { shipments } = useOrderShipments(id, Boolean(user) && Boolean(id));
   const buyAgain = useBuyAgain();
 
   if (!user) {
@@ -141,7 +143,11 @@ export default function OrderDetailScreen() {
         ))}
       </View>
 
-      {order.trackingLink || order.courierName ? (
+      <ShipmentTimelines shipments={shipments} />
+
+      {/* Orders shipped before Delhivery carry a hand-typed courier and link;
+          new ones name Delhivery with no link, and track above instead. */}
+      {order.trackingLink ? (
         <View
           className="border-t border-neutral-100 px-4 py-4"
           testID="order-tracking"
@@ -185,6 +191,12 @@ export default function OrderDetailScreen() {
             </Text>
           </View>
         ) : null}
+        <View className="flex-row items-center justify-between pt-3">
+          <Text className="text-sm text-neutral-600">Delivery</Text>
+          <Text className="text-sm text-neutral-900" testID="order-delivery-fee">
+            {order.deliveryFeeInPaise > 0 ? formatPaise(order.deliveryFeeInPaise) : "Free"}
+          </Text>
+        </View>
         <View className="flex-row items-center justify-between pt-3">
           <Text className="text-base font-semibold text-neutral-900">Total</Text>
           <Text className="text-base font-semibold text-neutral-900" testID="order-total">

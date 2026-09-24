@@ -2,6 +2,7 @@ import type { Cart } from "@geekbase-labs/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { getOrder, listOrders, reorder } from "./order-api";
+import { listOrderShipments } from "./shipping-api";
 
 export const ORDERS_KEY = ["orders"] as const;
 const CART_KEY = ["cart"] as const;
@@ -23,6 +24,16 @@ export function useOrders(enabled: boolean) {
     error: query.error,
     refetch: query.refetch,
   };
+}
+
+export function useOrderShipments(id: string, enabled: boolean) {
+  const query = useQuery({
+    queryKey: [...orderKey(id), "shipments"],
+    queryFn: () => listOrderShipments(id),
+    enabled,
+  });
+
+  return { shipments: query.data ?? [] };
 }
 
 export function useOrder(id: string, enabled: boolean) {

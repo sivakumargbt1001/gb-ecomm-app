@@ -16,24 +16,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PincodeSchema } from "@geekbase-labs/shared-types";
 
 import { useAuthStore } from "../../lib/auth-store";
-import { formatPaise } from "../../lib/catalog-api";
 import {
   describePincode,
   lookupDelivery,
   pincodeFromCoordinates,
 } from "../../lib/delivery-api";
+import { freeDeliveryRuleLabel, useDeliveryFeeRule } from "../../lib/delivery-fee";
+import { quoteEstimateLabel, quotePlaceLabel } from "../../lib/delivery-quote-text";
 import { useDeliveryStore } from "../../lib/delivery-store";
 import { useSiteTheme } from "../../lib/site-theme-context";
 import { useAddresses } from "../../lib/use-addresses";
 
 // How long a GPS fix gets before the last known position stands in.
 const LOCATION_FIX_TIMEOUT_MS = 8000;
-
-function estimateLabel(days: number): string {
-  if (days === 0) return "Same-day delivery";
-  if (days === 1) return "Delivery in 1 day";
-  return `Delivery in ${days} days`;
-}
 
 // The website header's delivery location, as a row under the app's header:
 // tap it for the dialog that checks a pincode, the device's position, or a
@@ -44,6 +39,7 @@ export function DeliveryPicker() {
   const pincode = useDeliveryStore((s) => s.pincode);
   const place = useDeliveryStore((s) => s.place);
   const quote = useDeliveryStore((s) => s.quote);
+  const feeRule = useDeliveryFeeRule();
   const isPanelOpen = useDeliveryStore((s) => s.isPanelOpen);
   const hydrate = useDeliveryStore((s) => s.hydrate);
   const setQuote = useDeliveryStore((s) => s.setQuote);
@@ -256,15 +252,15 @@ export function DeliveryPicker() {
                   {quote.serviceable ? (
                     <View testID="delivery-serviceable" className="gap-1">
                       <Text className="text-sm font-medium text-neutral-900">
-                        {quote.city}, {quote.state} · {quote.pincode}
+                        {quotePlaceLabel(quote)}
                       </Text>
+                      {quoteEstimateLabel(quote) ? (
+                        <Text className="text-sm text-neutral-500">
+                          {quoteEstimateLabel(quote)}
+                        </Text>
+                      ) : null}
                       <Text className="text-sm text-neutral-500">
-                        {estimateLabel(quote.estimatedDays ?? 0)}
-                      </Text>
-                      <Text className="text-sm text-neutral-500">
-                        {quote.deliveryFeeInPaise === 0
-                          ? "Free delivery"
-                          : `Delivery ${formatPaise(quote.deliveryFeeInPaise ?? 0)}`}
+                        {freeDeliveryRuleLabel(feeRule)}
                       </Text>
                     </View>
                   ) : (

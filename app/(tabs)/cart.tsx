@@ -9,6 +9,7 @@ import { ProductRecommendations } from "../../src/components/catalog/product-rec
 import { useCart } from "../../src/lib/use-cart";
 import { formatPaise } from "../../src/lib/catalog-api";
 import { deliveryDateLabel } from "../../src/lib/delivery-date";
+import { priceBag, useDeliveryFeeRule } from "../../src/lib/delivery-fee";
 import { useDeliveryStore } from "../../src/lib/delivery-store";
 import { useSiteTheme } from "../../src/lib/site-theme-context";
 import { useAuthStore } from "../../src/lib/auth-store";
@@ -163,6 +164,7 @@ export default function CartScreen() {
   const pincode = useDeliveryStore((s) => s.pincode);
   const place = useDeliveryStore((s) => s.place);
   const quote = useDeliveryStore((s) => s.quote);
+  const feeRule = useDeliveryFeeRule();
   const openPanel = useDeliveryStore((s) => s.openPanel);
 
   // The delivery picker lives on the Home tab, so changing the location
@@ -190,8 +192,12 @@ export default function CartScreen() {
     );
   }
 
-  const deliveryFeeInPaise = quote?.serviceable ? (quote.deliveryFeeInPaise ?? 0) : null;
-  const totalInPaise = cart.subtotalInPaise + (deliveryFeeInPaise ?? 0);
+  // The fee follows the bag, not the pincode. Coupons and points come off at
+  // checkout, which prices the fee again on what is left.
+  const { deliveryFeeInPaise, shortfallInPaise, totalInPaise } = priceBag(
+    cart.subtotalInPaise,
+    feeRule,
+  );
   const deliveryBy =
     quote?.serviceable && quote.estimatedDays !== null
       ? deliveryDateLabel(quote.estimatedDays)
@@ -260,13 +266,14 @@ export default function CartScreen() {
               className={`text-sm ${deliveryFeeInPaise === 0 ? "text-emerald-700" : "text-neutral-800"}`}
               testID="bag-delivery-fee"
             >
-              {deliveryFeeInPaise === null
-                ? "Calculated at checkout"
-                : deliveryFeeInPaise === 0
-                  ? "Free"
-                  : formatPaise(deliveryFeeInPaise)}
+              {deliveryFeeInPaise === 0 ? "Free" : formatPaise(deliveryFeeInPaise)}
             </Text>
           </View>
+          {shortfallInPaise > 0 ? (
+            <Text className="text-xs text-neutral-600" testID="bag-free-delivery-nudge">
+              Add {formatPaise(shortfallInPaise)} more for free delivery
+            </Text>
+          ) : null}
           <View className="flex-row justify-between border-t border-dashed border-neutral-200 pt-2">
             <Text className="text-base font-semibold text-neutral-900">Total amount</Text>
             <Text className="text-base font-semibold text-neutral-900" testID="bag-total">

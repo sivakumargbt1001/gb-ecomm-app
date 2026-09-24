@@ -44,6 +44,10 @@ function makeProduct(variants: { stock: number }[]): Product {
       mrpInPaise: null,
       stock: v.stock,
       sortOrder: i,
+      weightInGrams: null,
+      lengthCm: null,
+      breadthCm: null,
+      heightCm: null,
     })),
     images: [],
   };

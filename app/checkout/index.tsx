@@ -30,6 +30,7 @@ import { formatPaise } from "../../src/lib/catalog-api";
 import { useCartUiStore } from "../../src/lib/cart-store";
 import { appliedDiscount, checkoutCouponCode } from "../../src/lib/coupon";
 import { checkoutRedeemPoints, redeemedValueInPaise } from "../../src/lib/loyalty";
+import { priceBag, useDeliveryFeeRule } from "../../src/lib/delivery-fee";
 import { useLoyaltyBalance } from "../../src/lib/use-loyalty";
 import { CouponField } from "../../src/components/checkout/coupon-field";
 import { LoyaltyField } from "../../src/components/checkout/loyalty-field";
@@ -561,7 +562,11 @@ function ReviewStep({
     redeemedValueInPaise(points),
     applied.totalInPaise,
   );
-  const payableInPaise = applied.totalInPaise - pointsDiscountInPaise;
+  // Priced the way the server prices it: on what is left after coupon and points.
+  const { deliveryFeeInPaise, totalInPaise: payableInPaise } = priceBag(
+    applied.totalInPaise - pointsDiscountInPaise,
+    useDeliveryFeeRule(),
+  );
 
   return (
     <ScrollView
@@ -642,6 +647,12 @@ function ReviewStep({
             </Text>
           </View>
         ) : null}
+        <View className="flex-row justify-between">
+          <Text className="text-sm text-neutral-600">Delivery</Text>
+          <Text testID="checkout-delivery-fee" className="text-sm text-neutral-900">
+            {deliveryFeeInPaise === 0 ? "Free" : formatPaise(deliveryFeeInPaise)}
+          </Text>
+        </View>
         <View className="flex-row justify-between">
           <Text className="text-base font-semibold text-neutral-900">
             Total

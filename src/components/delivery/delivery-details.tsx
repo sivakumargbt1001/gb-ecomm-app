@@ -2,8 +2,8 @@ import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { formatPaise } from "../../lib/catalog-api";
-import { deliveryDateLabel } from "../../lib/delivery-date";
+import { freeDeliveryShortLabel, useDeliveryFeeRule } from "../../lib/delivery-fee";
+import { quoteArrivalDate } from "../../lib/delivery-quote-text";
 import { useDeliveryStore } from "../../lib/delivery-store";
 import { useSiteTheme } from "../../lib/site-theme-context";
 
@@ -14,6 +14,7 @@ export function DeliveryDetails() {
   const router = useRouter();
   const theme = useSiteTheme();
   const pincode = useDeliveryStore((s) => s.pincode);
+  const feeRule = useDeliveryFeeRule();
   const place = useDeliveryStore((s) => s.place);
   const quote = useDeliveryStore((s) => s.quote);
   const openPanel = useDeliveryStore((s) => s.openPanel);
@@ -57,15 +58,15 @@ export function DeliveryDetails() {
           <Ionicons name="car-outline" size={16} color="#737373" />
           {quote.serviceable ? (
             <Text className="text-sm text-neutral-800">
-              Delivery by{" "}
-              <Text className="font-semibold">
-                {deliveryDateLabel(quote.estimatedDays ?? 0)}
-              </Text>
-              {quote.deliveryFeeInPaise === 0
-                ? " · Free delivery"
-                : quote.deliveryFeeInPaise
-                  ? ` · ${formatPaise(quote.deliveryFeeInPaise)} delivery`
-                  : ""}
+              {quoteArrivalDate(quote) ? (
+                <>
+                  Delivery by{" "}
+                  <Text className="font-semibold">{quoteArrivalDate(quote)}</Text>
+                </>
+              ) : (
+                `Delivers to ${pincode}`
+              )}
+              {` · ${freeDeliveryShortLabel(feeRule)}`}
             </Text>
           ) : (
             <Text className="text-sm text-red-600">
